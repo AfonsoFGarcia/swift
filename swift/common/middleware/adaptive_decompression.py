@@ -22,8 +22,8 @@ class AdaptiveDecompressionMiddleware(object):
 		self.app = app
 	
 	def STORE(self, req, path):
-		if not path in storage:
-			storage[path] = {}
+		if not path in self.__class__.storage:
+			self.__class__.storage[path] = {}
 		
 		# Get the chunk
 		# Inflage the chunk
@@ -32,7 +32,7 @@ class AdaptiveDecompressionMiddleware(object):
 		return Response(request=req, body="OK", content_type="text/plain")
 	
 	def WRITE(self, req, path):
-		if not path in storage:
+		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
 		# Get the chunks from memory
