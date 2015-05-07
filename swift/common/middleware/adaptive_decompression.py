@@ -28,7 +28,7 @@ class AdaptiveDecompressionMiddleware(object):
 		path = req.path_qs
 		
 		if not path in self.__class__.storage:
-			self.__class__.storage[path] = {}
+			self.__class__.storage[path] = 1
 		
 		#body = env['wsgi.input'].read()
 		
