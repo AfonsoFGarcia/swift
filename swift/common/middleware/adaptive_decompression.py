@@ -53,7 +53,7 @@ class AdaptiveDecompressionMiddleware(object):
 		file_data = ''
 		
 		for i in self.__class__.storage[path]:
-			file.join(self.__class__.storage[path][i])
+			file_data.join(self.__class__.storage[path][i])
 		
 		# Modify request to contain rebuilt file
 		env['wsgi.input'] = StringIO(file_data)
