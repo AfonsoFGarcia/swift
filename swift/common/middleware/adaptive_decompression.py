@@ -44,6 +44,8 @@ class AdaptiveDecompressionMiddleware(object):
 	def __call__(self, env, start_response):
 		if env['REQUEST_METHOD'] != 'PUT':
 			return self.app(env, start_response)
+			
+		raise ValueError('YOU SHALL NOT PUT!')
 		
 		req = Request(env)
 		
