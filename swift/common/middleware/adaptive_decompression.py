@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from swift.common.swob import Request, Response
+import zlib
 
 class AdaptiveDecompressionMiddleware(object):
 	storage = {}
@@ -21,23 +22,36 @@ class AdaptiveDecompressionMiddleware(object):
 	def __init__(self, app):
 		self.app = app
 	
-	def STORE(self, req, path):
+	def STORE(self, env):
+		req = Request(env)
+		path = req.path_qs
+		
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
 		
-		# Get the chunk
 		# Inflage the chunk
+		chunk = zlib.decompress(env['wsgi.input'])
+		
 		# Store the chunk in memory
+		chunk_index = req.headers.get('X-Chunk-Index')
+		self.__class__.storage[path][chunk_index] = chunk
 		
 		return Response(request=req, body="OK", content_type="text/plain")
 	
-	def WRITE(self, req, path):
+	def WRITE(self, env):
+		req = Request(env)
+		path = req.path_qs
+		
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
+		# Do we really need this? Let's test.
 		# Get the chunks from memory
 		# Rebuild file
+		
 		# Modify request to contain rebuilt file
+		env['wsgi.input'] = self.__class__.storage[path]
+		del self.__class__.storage[path]
 		
 		return self.app
 	
@@ -56,8 +70,6 @@ class AdaptiveDecompressionMiddleware(object):
 		version, account, container, obj = req.split_path(1, 4, True)
 		if not obj:
 			return self.app(env, start_response)
-			
-		path = req.path_qs
 		
 		handler = None
 		
@@ -67,7 +79,7 @@ class AdaptiveDecompressionMiddleware(object):
 		if chunk_index:
 			handler = self.STORE
 		
-		return handler(req, path)(env, start_response)
+		return handler(env)(env, start_response)
 		
 def filter_factory(global_conf, **local_conf):
     def adaptive_decompression_filter(app):
