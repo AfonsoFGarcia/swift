@@ -42,6 +42,8 @@ class AdaptiveDecompressionMiddleware(object):
 		return self.app
 	
 	def __call__(self, env, start_response):
+		raise ValueError("I should be here!")
+		
 		if env['REQUEST_METHOD'] != 'PUT':
 			return self.app(env, start_response)
 		
@@ -52,8 +54,6 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		if not chunk_index or not to_write:
 			return self.app(env, start_response)
-		
-		raise ValueError("I should be here!")
 		
 		version, account, container, obj = req.split_path(1, 4, True)
 		if not obj:
