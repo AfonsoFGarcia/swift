@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from swift.common.swob import Request, Response
+from webob import Request, Response
 from cStringIO import StringIO
 import zlib
 
 class AdaptiveDecompressionMiddleware(object):
 	storage = {}
 	
-	def __init__(self, app):
+	def __init__(self, app, conf):
 		self.app = app
 	
 	def STORE(self, env):
@@ -90,6 +90,9 @@ class AdaptiveDecompressionMiddleware(object):
 		return handler(env)(env, start_response)
 		
 def filter_factory(global_conf, **local_conf):
+	conf = global_conf.copy()
+	conf.update(local_conf)
+	
     def adaptive_decompression_filter(app):
-        return AdaptiveDecompressionMiddleware(app)
+        return AdaptiveDecompressionMiddleware(app, conf)
     return adaptive_decompression_filter
