@@ -53,11 +53,11 @@ class AdaptiveDecompressionMiddleware(object):
 		if not chunk_index or not to_write:
 			return self.app(env, start_response)
 		
+		raise ValueException("I should be here!")
+		
 		version, account, container, obj = req.split_path(1, 4, True)
 		if not obj:
 			return self.app(env, start_response)
-			
-		raise ValueException("I should be here!")
 			
 		path = req.path_qs
 		
