@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from swift.common.swob import Request, Response
+from cStringIO import StringIO
 import zlib
 
 class AdaptiveDecompressionMiddleware(object):
