@@ -30,7 +30,7 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
 		
-		body = env['wsgi.input'].read()
+		#body = env['wsgi.input'].read()
 		
 		# Inflage the chunk
 		#chunk = zlib.decompress(body)
@@ -79,43 +79,15 @@ class AdaptiveDecompressionMiddleware(object):
 		if not obj:
 			return self.app(env, start_response)
 		
+		handler = None
+		
 		if to_write:
-			path = req.path_qs
-			
-			if not path in self.__class__.storage:
-				return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
-			
-			# Do we really need this? Let's test.
-			# Get the chunks from memory
-			# Rebuild file
-			
-			file_data = ''
-			
-			for i in self.__class__.storage[path]:
-				file_data.join(self.__class__.storage[path][i])
-			
-			# Modify request to contain rebuilt file
-			env['wsgi.input'] = StringIO(file_data)
-			del self.__class__.storage[path]
-			
-			return self.app(env, start_response)
+			handler = self.WRITE
 		
 		if chunk_index:
-			path = req.path_qs
+			handler = self.STORE
 		
-			if not path in self.__class__.storage:
-				self.__class__.storage[path] = {}
-		
-			body = env['wsgi.input'].read()
-		
-			# Inflage the chunk
-			#chunk = zlib.decompress(body)
-			
-			# Store the chunk in memory
-			chunk_index = req.headers.get('X-Chunk-Index')
-			self.__class__.storage[path][chunk_index] = chunk_index
-		
-			return self.app(env, start_response)
+		return handler(env)(env, start_response)
 		
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
