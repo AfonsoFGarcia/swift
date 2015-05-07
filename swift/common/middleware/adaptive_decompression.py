@@ -30,8 +30,10 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
 		
+		body = env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', '0')))
+		
 		# Inflage the chunk
-		chunk = zlib.decompress(env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', '0'))))
+		chunk = zlib.decompress(body)
 		
 		# Store the chunk in memory
 		chunk_index = req.headers.get('X-Chunk-Index')
