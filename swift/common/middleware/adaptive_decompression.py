@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from swift.common.swob import Request, Response
+from swift.common.utils import get_logger
 from cStringIO import StringIO
 import zlib
 
@@ -22,6 +23,7 @@ class AdaptiveDecompressionMiddleware(object):
 	
 	def __init__(self, app, conf):
 		self.app = app
+		self.logger = get_logger(conf, log_route="adaptive-middleware")
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -29,6 +31,8 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
+		
+		self.logger.debug(env['wsgi.input'])
 		
 		#body = env['wsgi.input'].read()
 		
