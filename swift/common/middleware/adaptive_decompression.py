@@ -94,5 +94,5 @@ def filter_factory(global_conf, **local_conf):
 	conf.update(local_conf)
 	
     def adaptive_decompression_filter(app):
-        return AdaptiveDecompressionMiddleware(app, conf)
+		return AdaptiveDecompressionMiddleware(app, conf)
     return adaptive_decompression_filter
