@@ -50,10 +50,8 @@ class AdaptiveDecompressionMiddleware(object):
 		chunk_index = req.headers.get('X-Chunk-Index')
 		to_write = req.headers.get('X-Write-To-Core')
 		
-		if not chunk_index or not to_write:
+		if not chunk_index and not to_write:
 			return self.app(env, start_response)
-			
-		raise ValueError("I should be here!")
 		
 		version, account, container, obj = req.split_path(1, 4, True)
 		if not obj:
