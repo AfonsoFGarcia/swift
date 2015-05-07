@@ -33,6 +33,7 @@ class AdaptiveDecompressionMiddleware(object):
 	
 	def WRITE(self, req, path):
 		if not path in __storage:
+			raise ValueError("EHHHHHHHH")
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
 		# Get the chunks from memory
