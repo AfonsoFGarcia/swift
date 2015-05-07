@@ -18,7 +18,7 @@ from swift.common.swob import Request, Response
 class AdaptiveDecompressionMiddleware(object):
 	__storage = {}
 	
-	def __init__(self, app, conf):
+	def __init__(self, app):
 		self.app = app
 	
 	def STORE(self, req, path):
@@ -68,3 +68,8 @@ class AdaptiveDecompressionMiddleware(object):
 			handler = self.STORE
 		
 		return handler(req, path)(env, start_response)
+		
+def filter_factory(global_conf, **local_conf):
+    def adaptive_decompression_filter(app):
+        return AdaptiveDecompressionMiddleware(app)
+    return adaptive_decompression_filter
