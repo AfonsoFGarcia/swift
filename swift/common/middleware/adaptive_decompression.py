@@ -32,7 +32,7 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
 		
-		self.logger.debug(env['wsgi.input'])
+		self.logger.info(env['wsgi.input'])
 		
 		#body = env['wsgi.input'].read()
 		
