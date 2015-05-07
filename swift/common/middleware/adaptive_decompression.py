@@ -31,7 +31,7 @@ class AdaptiveDecompressionMiddleware(object):
 			self.__class__.storage[path] = {}
 		
 		# Inflage the chunk
-		chunk = zlib.decompress(StringIO(env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', '0')))))
+		chunk = zlib.decompress(env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', '0'))))
 		
 		# Store the chunk in memory
 		chunk_index = req.headers.get('X-Chunk-Index')
@@ -50,8 +50,13 @@ class AdaptiveDecompressionMiddleware(object):
 		# Get the chunks from memory
 		# Rebuild file
 		
+		file_data = ''
+		
+		for i in self.__class__.storage[path]:
+			file.join(self.__class__.storage[path][i])
+		
 		# Modify request to contain rebuilt file
-		env['wsgi.input'] = self.__class__.storage[path]
+		env['wsgi.input'] = StringIO(file_data)
 		del self.__class__.storage[path]
 		
 		return self.app
