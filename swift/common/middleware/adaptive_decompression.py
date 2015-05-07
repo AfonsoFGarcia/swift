@@ -30,6 +30,8 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
 		
+		env['wsgi.input'].send_hundred_continue_response()
+		
 		# Inflage the chunk
 		chunk = zlib.decompress(env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', '0'))))
 		
@@ -37,7 +39,7 @@ class AdaptiveDecompressionMiddleware(object):
 		chunk_index = req.headers.get('X-Chunk-Index')
 		self.__class__.storage[path][chunk_index] = chunk
 		
-		return Response(request=req, status=100, content_type="text/plain")
+		return Response(request=req, status=202, content_type="text/plain")
 	
 	def WRITE(self, env):
 		req = Request(env)
