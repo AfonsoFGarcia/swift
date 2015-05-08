@@ -43,7 +43,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		# Store the chunk in memory
 		chunk_index = req.headers.get('X-Chunk-Index')
-		self.__class__.storage[path][chunk_index] = chunk_index
+		self.__class__.storage[path][chunk_index] = chunk
 		
 		return Response(request=req, status=201)
 	
