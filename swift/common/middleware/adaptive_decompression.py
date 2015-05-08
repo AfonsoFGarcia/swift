@@ -37,7 +37,7 @@ class AdaptiveDecompressionMiddleware(object):
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 		
 		# Inflage the chunk
-		chunk = zlib.decompress(body)
+		chunk = zlib.decompress(buffer(body, 0, len(body)))
 		
 		self.logger.debug(chunk)
 		
