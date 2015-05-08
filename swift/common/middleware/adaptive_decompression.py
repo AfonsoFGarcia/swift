@@ -20,7 +20,7 @@ from string import Template
 import zlib
 
 class AdaptiveDecompressionMiddleware(object):
-	storage = {}
+	global storage = {}
 	
 	def __init__(self, app, conf):
 		self.app = app
