@@ -70,7 +70,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		for x in range(0, n_chunks):
 			info = Template('Is key $key in dict? $val')
-			self.logger.debug(info.substitute(key=x, val=self.__class__.storage[path].contains_key(x)))
+			self.logger.debug(info.substitute(key=x, val=(x in self.__class__.storage[path])))
 			file_data.write(self.__class__.storage[path][x])
 			file_length = file_length + len(self.__class__.storage[path][x])
 		
