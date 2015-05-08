@@ -77,8 +77,6 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(file_length)
 		
 		# Modify request to contain rebuilt file
-		trash = env['wsgi.input'].read(req.message_length)
-		
 		env['wsgi.input'] = file_data
 		req.headers['Content-Length'] = file_length
 		del self.__class__.storage[path]
