@@ -31,8 +31,8 @@ class AdaptiveDecompressionMiddleware(object):
 		path = req.path_qs
 		chunk_index = int(req.headers.get('X-Chunk-Index'))
 		
-		info = Template('Detected STORE request: $path')
-		self.logger.debug(info.substitute(path))
+		info = Template('Detected STORE request: $rpath')
+		self.logger.debug(info.substitute(rpath=path))
 		
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
@@ -55,8 +55,8 @@ class AdaptiveDecompressionMiddleware(object):
 		req = Request(env)
 		path = req.path_qs
 		
-		info = Template('Detected WRITE request: $path')
-		self.logger.debug(info.substitute(path))
+		info = Template('Detected WRITE request: $rpath')
+		self.logger.debug(info.substitute(rpath=path))
 		
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
