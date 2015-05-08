@@ -16,6 +16,7 @@
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
 from tempfile import TemporaryFile
+from string import Template
 import zlib
 
 class AdaptiveDecompressionMiddleware(object):
@@ -30,6 +31,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		req = Request(env)
 		path = req.path_qs
+		chunk_index = int(req.headers.get('X-Chunk-Index'))
 		
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
@@ -39,10 +41,11 @@ class AdaptiveDecompressionMiddleware(object):
 		# Inflage the chunk
 		chunk = bytearray(zlib.decompress(buffer(body, 0, len(body))))
 		
-		self.logger.debug(len(chunk))
+		# Debug Info
+		info = Template('$nchunk : $length')
+		self.logger.debug(info.substitute(nchunk=chunk, length=len(chunk)))
 		
 		# Store the chunk in memory
-		chunk_index = int(req.headers.get('X-Chunk-Index'))
 		self.__class__.storage[path][chunk_index] = chunk
 		
 		return Response(request=req, status=201)
