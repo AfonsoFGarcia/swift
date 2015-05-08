@@ -19,7 +19,7 @@ from tempfile import TemporaryFile
 from string import Template
 import zlib
 
-global storage = {}
+storage = {}
 
 class AdaptiveDecompressionMiddleware(object):
 		
@@ -28,6 +28,7 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger = get_logger(conf, log_route="adaptdecomp")
 	
 	def STORE(self, env):
+		global storage
 		req = Request(env)
 		path = req.path_qs
 		chunk_index = int(req.headers.get('X-Chunk-Index'))
@@ -53,6 +54,7 @@ class AdaptiveDecompressionMiddleware(object):
 		return Response(request=req, status=201)
 	
 	def WRITE(self, env):
+		global storage
 		req = Request(env)
 		path = req.path_qs
 		
