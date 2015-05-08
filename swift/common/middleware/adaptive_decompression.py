@@ -35,6 +35,7 @@ class AdaptiveDecompressionMiddleware(object):
 			self.__class__.storage[path] = {}
 		
 		self.logger.info(env['wsgi.input'].read())
+		self.logger.info(env['wsgi.input'].read())
 		
 		#body = env['wsgi.input'].read()
 		
