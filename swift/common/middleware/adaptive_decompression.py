@@ -34,7 +34,7 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
 		
-		body = env['wsgi.input'].read(req.message_length)
+		body = bytearray(env['wsgi.input'].read(req.message_length))
 		self.logger.debug(body)
 		
 		# Inflage the chunk
