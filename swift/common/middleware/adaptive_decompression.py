@@ -53,6 +53,7 @@ class AdaptiveDecompressionMiddleware(object):
 		return Response(request=req, status=201)
 	
 	def WRITE(self, env):
+		req = Request(env)
 		path = req.path_qs
 		path_comp = req.path
 		
