@@ -15,7 +15,6 @@
 
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
-from cStringIO import StringIO
 import zlib
 
 class AdaptiveDecompressionMiddleware(object):
@@ -37,9 +36,9 @@ class AdaptiveDecompressionMiddleware(object):
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 		
 		# Inflage the chunk
-		chunk = zlib.decompress(buffer(body, 0, len(body)))
+		chunk = bytearray(zlib.decompress(buffer(body, 0, len(body))))
 		
-		self.logger.debug(chunk)
+		self.logger.debug(len(chunk))
 		
 		# Store the chunk in memory
 		chunk_index = req.headers.get('X-Chunk-Index')
@@ -56,17 +55,17 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
-		# Do we really need this? Let's test.
-		# Get the chunks from memory
-		# Rebuild file
+
+		# Get the chunks from memory and rebuild file
 		
-		file_data = ''.join(self.__class__.storage[path].values())
+		file_data = bytearray()
+		file_data.join(self.__class__.storage[path].values())
 		
-		self.logger.debug(file_data)
+		self.logger.debug(len(file_data))
 		
 		# Modify request to contain rebuilt file
 		
-		env['wsgi.input'] = StringIO(file_data)
+		env['wsgi.input'] = file_data
 		req.headers['Content-Length'] = len(file_data)
 		del self.__class__.storage[path]
 		
