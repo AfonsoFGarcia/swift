@@ -43,7 +43,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		# Debug Info
 		info = Template('$nchunk : $length')
-		self.logger.debug(info.substitute(nchunk=chunk, length=len(chunk)))
+		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
 		# Store the chunk in memory
 		self.__class__.storage[path][chunk_index] = chunk
