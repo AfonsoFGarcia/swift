@@ -23,9 +23,11 @@ class AdaptiveDecompressionMiddleware(object):
 	
 	def __init__(self, app, conf):
 		self.app = app
-		self.logger = get_logger(conf, log_route="adaptive-middleware")
+		self.logger = get_logger(conf, log_route="adaptdecomp")
 	
 	def STORE(self, env):
+		self.logger.info("Detected STORE request.")
+		
 		req = Request(env)
 		path = req.path_qs
 		
@@ -46,6 +48,8 @@ class AdaptiveDecompressionMiddleware(object):
 		return self.app
 	
 	def WRITE(self, env):
+		self.logger.info("Detected WRITE request.")
+		
 		req = Request(env)
 		path = req.path_qs
 		
