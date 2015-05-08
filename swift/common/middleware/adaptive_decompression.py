@@ -61,24 +61,19 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
-		n_chunks = int(env['wsgi.input'].read(req.message_length))
-		
 		# Get the chunks from memory and rebuild file
 		
 		file_data = TemporaryFile()
 		file_length = 0
 		
-		for x in range(0, n_chunks):
-			info = Template('Is key $key in dict? $val')
-			self.logger.debug(info.substitute(key=x, val=(x in self.__class__.storage[path])))
-			file_data.write(self.__class__.storage[path][x])
-			file_length = file_length + len(self.__class__.storage[path][x])
+		for chunk in self.__class__.storage[path].values():
+			file_data.write(chunk)
+			file_length = file_length + len(chunk)
 		
 		self.logger.debug(file_length)
 		
 		# Modify request to contain rebuilt file
 		env['wsgi.input'] = file_data
-		req.headers['Content-Length'] = file_length
 		del self.__class__.storage[path]
 		
 		return self.app
