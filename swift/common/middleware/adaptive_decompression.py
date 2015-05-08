@@ -97,12 +97,33 @@ class AdaptiveDecompressionMiddleware(object):
 		handler = None
 		
 		if to_write:
-			handler = self.WRITE
+			path = req.path_qs
+			
+			info = Template('Detected WRITE request: $rpath')
+			self.logger.debug(info.substitute(rpath=path))
+			
+			if not path in self.__class__.storage:
+				return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
+			
+			# Get the chunks from memory and rebuild file
+			
+			file_data = TemporaryFile()
+			file_length = 0
+			
+			for chunk in self.__class__.storage[path].values():
+				file_data.write(chunk)
+				file_length = file_length + len(chunk)
+			
+			self.logger.debug(file_length)
+			
+			# Modify request to contain rebuilt file
+			env['wsgi.input'] = file_data
+			del self.__class__.storage[path]
+			
+			return self.app(env, start_response)
 		
 		if chunk_index:
-			handler = self.STORE
-		
-		return handler(env)(env, start_response)
+			return self.STORE(env)(env, start_response)
 		
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
