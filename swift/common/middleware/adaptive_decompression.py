@@ -58,7 +58,7 @@ class AdaptiveDecompressionMiddleware(object):
 		# Get the chunks from memory and rebuild file
 		
 		file_data = bytearray()
-		for chunk in self.__class__storage[path].values():
+		for chunk in self.__class__.storage[path].values():
 			for b in chunk:
 				file_data.append(b)
 		
@@ -66,7 +66,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		# Modify request to contain rebuilt file
 		
-		env['wsgi.input'] = file_data
+		env['wsgi.input'] = buffer(file_data, 0, len(file_data))
 		req.headers['Content-Length'] = len(file_data)
 		del self.__class__.storage[path]
 		
