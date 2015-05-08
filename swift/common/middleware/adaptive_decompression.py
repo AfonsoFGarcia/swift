@@ -27,11 +27,12 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger = get_logger(conf, log_route="adaptdecomp")
 	
 	def STORE(self, env):
-		self.logger.debug("Detected STORE request.")
-		
 		req = Request(env)
 		path = req.path_qs
 		chunk_index = int(req.headers.get('X-Chunk-Index'))
+		
+		info = Template('Detected STORE request: $path')
+		self.logger.debug(info.substitute(path))
 		
 		if not path in self.__class__.storage:
 			self.__class__.storage[path] = {}
@@ -51,10 +52,11 @@ class AdaptiveDecompressionMiddleware(object):
 		return Response(request=req, status=201)
 	
 	def WRITE(self, env):
-		self.logger.debug("Detected WRITE request.")
-		
 		req = Request(env)
 		path = req.path_qs
+		
+		info = Template('Detected WRITE request: $path')
+		self.logger.debug(info.substitute(path))
 		
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
