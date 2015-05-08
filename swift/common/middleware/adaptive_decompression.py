@@ -55,10 +55,9 @@ class AdaptiveDecompressionMiddleware(object):
 	def WRITE(self, env):
 		req = Request(env)
 		path = req.path_qs
-		path_comp = req.path
 		
 		info = Template('Detected WRITE request: $rpath')
-		self.logger.debug(info.substitute(rpath=path_comp))
+		self.logger.debug(info.substitute(rpath=path))
 		
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
