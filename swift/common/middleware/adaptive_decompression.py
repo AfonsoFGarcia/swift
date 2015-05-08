@@ -45,7 +45,7 @@ class AdaptiveDecompressionMiddleware(object):
 		chunk_index = req.headers.get('X-Chunk-Index')
 		self.__class__.storage[path][chunk_index] = chunk_index
 		
-		return Response(request=req, status=100)
+		return Response(request=req, status=201)
 	
 	def WRITE(self, env):
 		self.logger.info("Detected WRITE request.")
