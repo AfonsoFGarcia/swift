@@ -18,6 +18,7 @@ from swift.common.utils import get_logger
 from tempfile import TemporaryFile
 from string import Template
 import zlib
+import httplib
 
 class AdaptiveDecompressionMiddleware(object):
 	storage = {}
@@ -108,20 +109,25 @@ class AdaptiveDecompressionMiddleware(object):
 			
 			# Get the chunks from memory and rebuild file
 			
-			file_data = TemporaryFile()
+			file_data = bytearray()
 			file_length = 0
 			
 			for chunk in self.__class__.storage[path].values():
-				file_data.write(chunk)
+				for b in chunk:
+					file_data.append(b)
 				file_length = file_length + len(chunk)
 			
 			self.logger.debug(file_length)
 			
 			# Modify request to contain rebuilt file
-			env['wsgi.input'] = file_data
+			#env['wsgi.input'] = file_data
 			del self.__class__.storage[path]
 			
-			return Response(request=req, status=201)(env, start_response)
+			headers = {"X-Auth-Token": req.headers.get('X-Auth-Token'), "Content-Length": file_length, "User-Agent": "AdaptiveMiddleware"}
+			conn = httplib.HTTPConnection("127.0.0.1:8080")
+			conn.request("PUT", path, file_data, headers)
+			
+			return Response(request=req, status=conn.getresponse())(env, start_response)
 		
 		if chunk_index:
 			return self.STORE(env)(env, start_response)
