@@ -60,7 +60,7 @@ class AdaptiveDecompressionMiddleware(object):
 		# Get the chunks from memory
 		# Rebuild file
 		
-		file_data = ''.join(self.__class__.storage[path])
+		file_data = ''.join(self.__class__.storage[path].values())
 		
 		self.logger.debug(file_data)
 		
