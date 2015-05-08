@@ -26,7 +26,7 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger = get_logger(conf, log_route="adaptdecomp")
 	
 	def STORE(self, env):
-		self.logger.info("Detected STORE request.")
+		self.logger.debug("Detected STORE request.")
 		
 		req = Request(env)
 		path = req.path_qs
@@ -35,7 +35,7 @@ class AdaptiveDecompressionMiddleware(object):
 			self.__class__.storage[path] = {}
 		
 		body = env['wsgi.input'].read(req.message_length)
-		self.logger.info(body)
+		self.logger.debug(body)
 		
 		# Inflage the chunk
 		#chunk = zlib.decompress(body)
@@ -47,7 +47,7 @@ class AdaptiveDecompressionMiddleware(object):
 		return Response(request=req, status=201)
 	
 	def WRITE(self, env):
-		self.logger.info("Detected WRITE request.")
+		self.logger.debug("Detected WRITE request.")
 		
 		req = Request(env)
 		path = req.path_qs
@@ -63,6 +63,8 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		for i in self.__class__.storage[path]:
 			file_data.join(self.__class__.storage[path][i])
+		
+		self.logger.debug(file_data)
 		
 		# Modify request to contain rebuilt file
 		#env['wsgi.input'] = StringIO(file_data)
