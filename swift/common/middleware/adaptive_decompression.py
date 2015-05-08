@@ -53,31 +53,33 @@ class AdaptiveDecompressionMiddleware(object):
 		return Response(request=req, status=201)
 	
 	def WRITE(self, env):
-		req = Request(env)
 		path = req.path_qs
+		path_comp = req.path
 		
 		info = Template('Detected WRITE request: $rpath')
-		self.logger.debug(info.substitute(rpath=path))
+		self.logger.debug(info.substitute(rpath=path_comp))
 		
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
 		# Get the chunks from memory and rebuild file
-		
-		file_data = TemporaryFile()
+		file_data = bytearray()
 		file_length = 0
 		
 		for chunk in self.__class__.storage[path].values():
-			file_data.write(chunk)
+			for b in chunk:
+				file_data.append(b)
 			file_length = file_length + len(chunk)
 		
 		self.logger.debug(file_length)
-		
-		# Modify request to contain rebuilt file
-		env['wsgi.input'] = file_data
 		del self.__class__.storage[path]
 		
-		return self.app
+		# Create new request with rebuilt file
+		headers = {"X-Auth-Token": req.headers.get('X-Auth-Token'), "Content-Length": file_length, "User-Agent": "AdaptiveMiddleware"}
+		conn = httplib.HTTPConnection("127.0.0.1:8080")
+		conn.request("PUT", path, file_data, headers)
+		
+		return Response(request=req, status=conn.getresponse().status)
 	
 	def __call__(self, env, start_response):
 		if env['REQUEST_METHOD'] != 'PUT':
@@ -98,39 +100,12 @@ class AdaptiveDecompressionMiddleware(object):
 		handler = None
 		
 		if to_write:
-			path = req.path_qs
-			path_comp = req.path
-			
-			info = Template('Detected WRITE request: $rpath')
-			self.logger.debug(info.substitute(rpath=path_comp))
-			
-			if not path in self.__class__.storage:
-				return Response(request=req, status=404, body="No chunks found", content_type="text/plain")(env, start_response)
-			
-			# Get the chunks from memory and rebuild file
-			
-			file_data = bytearray()
-			file_length = 0
-			
-			for chunk in self.__class__.storage[path].values():
-				for b in chunk:
-					file_data.append(b)
-				file_length = file_length + len(chunk)
-			
-			self.logger.debug(file_length)
-			
-			# Modify request to contain rebuilt file
-			#env['wsgi.input'] = file_data
-			del self.__class__.storage[path]
-			
-			headers = {"X-Auth-Token": req.headers.get('X-Auth-Token'), "Content-Length": file_length, "User-Agent": "AdaptiveMiddleware"}
-			conn = httplib.HTTPConnection("127.0.0.1:8080")
-			conn.request("PUT", path, file_data, headers)
-			
-			return Response(request=req, status=conn.getresponse())(env, start_response)
+			handler = self.WRITE
 		
 		if chunk_index:
-			return self.STORE(env)(env, start_response)
+			handler = self.STORE
+		
+		return handler(env)(env, start_response)
 		
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
