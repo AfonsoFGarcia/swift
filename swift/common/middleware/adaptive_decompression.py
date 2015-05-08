@@ -103,7 +103,7 @@ class AdaptiveDecompressionMiddleware(object):
 			self.logger.debug(info.substitute(rpath=path))
 			
 			if not path in self.__class__.storage:
-				return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
+				return Response(request=req, status=404, body="No chunks found", content_type="text/plain")(env, start_response)
 			
 			# Get the chunks from memory and rebuild file
 			
