@@ -98,9 +98,10 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		if to_write:
 			path = req.path_qs
+			path_comp = req.path
 			
 			info = Template('Detected WRITE request: $rpath')
-			self.logger.debug(info.substitute(rpath=path))
+			self.logger.debug(info.substitute(rpath=path_comp))
 			
 			if not path in self.__class__.storage:
 				return Response(request=req, status=404, body="No chunks found", content_type="text/plain")(env, start_response)
@@ -120,7 +121,7 @@ class AdaptiveDecompressionMiddleware(object):
 			env['wsgi.input'] = file_data
 			del self.__class__.storage[path]
 			
-			return self.app(env, start_response)
+			return return Response(request=req, status=201)(env, start_response)
 		
 		if chunk_index:
 			return self.STORE(env)(env, start_response)
