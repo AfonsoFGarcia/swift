@@ -15,6 +15,7 @@
 
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
+from tempfile import TemporaryFile
 import zlib
 
 class AdaptiveDecompressionMiddleware(object):
@@ -55,19 +56,23 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
+		n_chunks = int(env['wsgi.input'].read(req.message_length))
+		
 		# Get the chunks from memory and rebuild file
 		
-		file_data = bytearray()
-		for chunk in self.__class__.storage[path].values():
-			for b in chunk:
-				file_data.append(b)
+		file_data = TemporaryFile()
+		file_length = 0
 		
-		self.logger.debug(len(file_data))
+		for x in range(0, n_chunks):
+			file_data.write(self.__class__.storage[path][x])
+			file_length = file_length + len(self.__class__.storage[path][x])
+		
+		self.logger.debug(file_length)
 		
 		# Modify request to contain rebuilt file
 		
-		env['wsgi.input'] = buffer(file_data, 0, len(file_data))
-		req.headers['Content-Length'] = len(file_data)
+		env['wsgi.input'] = file_data
+		req.headers['Content-Length'] = file_length
 		del self.__class__.storage[path]
 		
 		return self.app
