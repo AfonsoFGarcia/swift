@@ -121,7 +121,7 @@ class AdaptiveDecompressionMiddleware(object):
 			env['wsgi.input'] = file_data
 			del self.__class__.storage[path]
 			
-			return return Response(request=req, status=201)(env, start_response)
+			return Response(request=req, status=201)(env, start_response)
 		
 		if chunk_index:
 			return self.STORE(env)(env, start_response)
