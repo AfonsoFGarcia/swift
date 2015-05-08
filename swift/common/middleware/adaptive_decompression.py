@@ -19,16 +19,14 @@ from tempfile import TemporaryFile
 from string import Template
 import zlib
 
-storage = {}
-
 class AdaptiveDecompressionMiddleware(object):
-		
+	global storage = {}
+	
 	def __init__(self, app, conf):
 		self.app = app
 		self.logger = get_logger(conf, log_route="adaptdecomp")
 	
 	def STORE(self, env):
-		global storage
 		req = Request(env)
 		path = req.path_qs
 		chunk_index = int(req.headers.get('X-Chunk-Index'))
@@ -36,8 +34,8 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('Detected STORE request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		if not path in storage:
-			storage[path] = {}
+		if not path in self.__class__.storage:
+			self.__class__.storage[path] = {}
 		
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 		
@@ -49,19 +47,18 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
 		# Store the chunk in memory
-		storage[path][chunk_index] = chunk
+		self.__class__.storage[path][chunk_index] = chunk
 		
 		return Response(request=req, status=201)
 	
 	def WRITE(self, env):
-		global storage
 		req = Request(env)
 		path = req.path_qs
 		
 		info = Template('Detected WRITE request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		if not path in storage:
+		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
 		n_chunks = int(env['wsgi.input'].read(req.message_length))
@@ -73,17 +70,18 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		for x in range(0, n_chunks):
 			info = Template('Is key $key in dict? $val')
-			self.logger.debug(info.substitute(key=x, val=(x in storage[path])))
-			file_data.write(storage[path][x])
-			file_length = file_length + len(storage[path][x])
+			self.logger.debug(info.substitute(key=x, val=(x in self.__class__.storage[path])))
+			file_data.write(self.__class__.storage[path][x])
+			file_length = file_length + len(self.__class__.storage[path][x])
 		
 		self.logger.debug(file_length)
 		
 		# Modify request to contain rebuilt file
+		trash = env['wsgi.input'].read(req.message_length)
 		
 		env['wsgi.input'] = file_data
 		req.headers['Content-Length'] = file_length
-		del storage[path]
+		del self.__class__.storage[path]
 		
 		return self.app
 	
