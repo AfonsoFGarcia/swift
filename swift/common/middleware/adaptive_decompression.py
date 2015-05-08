@@ -67,7 +67,7 @@ class AdaptiveDecompressionMiddleware(object):
 		# Modify request to contain rebuilt file
 		
 		env['wsgi.input'] = StringIO(file_data)
-		req.headers.set('Content-Length', len(file_data))
+		req.headers['Content-Length'] = len(file_data)
 		del self.__class__.storage[path]
 		
 		return self.app
