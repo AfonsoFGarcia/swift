@@ -55,11 +55,12 @@ class AdaptiveDecompressionMiddleware(object):
 		if not path in self.__class__.storage:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
-
 		# Get the chunks from memory and rebuild file
 		
 		file_data = bytearray()
-		file_data.join(self.__class__.storage[path].values())
+		for chunk in self.__class__storage[path].values():
+			for b in chunk:
+				file_data.append(b)
 		
 		self.logger.debug(len(file_data))
 		
