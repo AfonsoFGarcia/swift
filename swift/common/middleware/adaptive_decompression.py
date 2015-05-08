@@ -65,7 +65,7 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(file_data)
 		
 		# Modify request to contain rebuilt file
-		#env['wsgi.input'] = StringIO(file_data)
+		env['wsgi.input'] = StringIO(file_data)
 		del self.__class__.storage[path]
 		
 		return self.app
