@@ -451,8 +451,8 @@ use = egg:swift#ratelimit
 
 [filter:adaptive_decompression]
 use = egg:swift#adaptive_decompression
+set log_name = adaptive_decompression
 # You can override the default log routing for this filter here:
-# set log_name = domain_remap
 # set log_facility = LOG_LOCAL0
 # set log_level = INFO
 # set log_headers = false
@@ -460,8 +460,8 @@ use = egg:swift#adaptive_decompression
 
 [filter:request_compression]
 use = egg:swift#request_compression
+set log_name = request_compression
 # You can override the default log routing for this filter here:
-# set log_name = domain_remap
 # set log_facility = LOG_LOCAL0
 # set log_level = INFO
 # set log_headers = false
