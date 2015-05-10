@@ -932,9 +932,9 @@ class BaseObjectController(Controller):
         else:
             write_header = req.headers.get('X-Write-To-Core')
             reader = None
-            if write_header not None:
+            try:
                 reader = req.environ.rebuilt_file
-            else:
+            except AttributeError:
                 reader = req.environ['wsgi.input'].read
             data_source = iter(lambda: reader(self.app.client_chunk_size), '')
             update_response = lambda req, resp: resp
