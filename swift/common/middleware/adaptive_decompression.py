@@ -20,8 +20,6 @@ from string import Template
 import zlib
 import httplib
 
-class ExtendedDict(dict)
-
 class AdaptiveDecompressionMiddleware(object):
 	storage = {}
 	
