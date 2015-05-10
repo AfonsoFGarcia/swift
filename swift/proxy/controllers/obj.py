@@ -952,8 +952,6 @@ class BaseObjectController(Controller):
                 reader = req.environ['wsgi.input'].read
             data_source = iter(lambda: reader(self.app.client_chunk_size), '')
             update_response = lambda req, resp: resp
-            
-        print(outgoing_headers);
 
         # send object to storage nodes
         resp = self._store_object(
