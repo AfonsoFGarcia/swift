@@ -74,8 +74,12 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(file_length)
 		del self.__class__.storage[path]
 		
+		tmp_file = TemporaryFile()
+		tmp_file.write(file_data)
+		tmp_file.seek(0)
+		
 		# Modify enviroment to include new file
-		env['rebuilt_file'] = file_data
+		env['rebuilt_file'] = tmp_file
 		
 		return self.app
 	
