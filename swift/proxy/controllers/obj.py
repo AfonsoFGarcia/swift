@@ -943,7 +943,11 @@ class BaseObjectController(Controller):
             reader = None
             try:
                 reader = req.environ['rebuilt_file'].read
-                outgoing_headers['Content-Length'] = req.environ['rebuilt_file_size']
+                for ind_dict in outgoing_headers:
+                    try:
+                        ind_dict['Content-Length'] = req.environ['rebuilt_file_size']
+                    except: KeyError:
+                        continue
             except KeyError:
                 reader = req.environ['wsgi.input'].read
             data_source = iter(lambda: reader(self.app.client_chunk_size), '')
