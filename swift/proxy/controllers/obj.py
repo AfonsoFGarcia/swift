@@ -930,7 +930,12 @@ class BaseObjectController(Controller):
             if error_response:
                 return error_response
         else:
-            reader = req.environ['wsgi.input'].read
+            write_header = req.headers.get('X-Write-To-Core')
+            reader = None
+            if write_header not None:
+                reader = req.environ.rebuilt_file
+            else:
+                reader = req.environ['wsgi.input'].read
             data_source = iter(lambda: reader(self.app.client_chunk_size), '')
             update_response = lambda req, resp: resp
 
