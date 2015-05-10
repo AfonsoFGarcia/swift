@@ -18,14 +18,13 @@ from swift.common.utils import get_logger
 from tempfile import TemporaryFile
 from string import Template
 import zlib
-import httplib
 
 class AdaptiveDecompressionMiddleware(object):
 	storage = {}
 	
 	def __init__(self, app, conf):
 		self.app = app
-		self.logger = get_logger(conf, log_route="adaptdecomp")
+		self.logger = get_logger(conf)
 	
 	def STORE(self, env):
 		req = Request(env)
