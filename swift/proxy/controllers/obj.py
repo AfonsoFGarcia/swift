@@ -921,6 +921,11 @@ class BaseObjectController(Controller):
 
         # check if versioning is enabled and handle copying previous version
         self._handle_object_versions(req)
+        
+        # add special headers to be handled by storage nodes
+        outgoing_headers = self._backend_requests(
+            req, len(nodes), container_partition, container_nodes,
+            delete_at_container, delete_at_part, delete_at_nodes)
 
         # check if request is a COPY of an existing object
         source_header = req.headers.get('X-Copy-From')
@@ -934,6 +939,7 @@ class BaseObjectController(Controller):
             reader = None
             try:
                 reader = req.environ['rebuilt_file'].read
+                outgoing_headers['Content-Length'] = req.environ['rebuilt_file_size']
             except KeyError:
                 reader = req.environ['wsgi.input'].read
             data_source = iter(lambda: reader(self.app.client_chunk_size), '')
@@ -943,12 +949,9 @@ class BaseObjectController(Controller):
         req, delete_at_container, delete_at_part, \
             delete_at_nodes = self._config_obj_expiration(req)
 
-        # add special headers to be handled by storage nodes
-        outgoing_headers = self._backend_requests(
-            req, len(nodes), container_partition, container_nodes,
-            delete_at_container, delete_at_part, delete_at_nodes)
+        
             
-        self.logger.info(outgoing_headers);
+        print(outgoing_headers);
 
         # send object to storage nodes
         resp = self._store_object(

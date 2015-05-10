@@ -80,6 +80,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		# Modify enviroment to include new file
 		env['rebuilt_file'] = tmp_file
+		env['rebuilt_file_size'] = file_length
 		
 		return self.app
 	
