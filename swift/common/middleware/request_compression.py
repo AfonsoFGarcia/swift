@@ -40,7 +40,7 @@ class CompressionMiddleware(object):
 		
 		if get_compressed and obj and req.method == 'GET' and is_success(resp.status_int):
 			body = bytearray(resp.body);
-			def_body = zlib.compress(buffer(body, 0, len(body)))
+			def_body = zlib.compress(buffer(body, 0, len(body)), 9)
 			resp.body = def_body
 			resp.headers['Content-Length'] = len(def_body)
 			
