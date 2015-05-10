@@ -946,7 +946,7 @@ class BaseObjectController(Controller):
                 for ind_dict in outgoing_headers:
                     try:
                         ind_dict['Content-Length'] = req.environ['rebuilt_file_size']
-                    except: KeyError:
+                    except KeyError:
                         continue
             except KeyError:
                 reader = req.environ['wsgi.input'].read
