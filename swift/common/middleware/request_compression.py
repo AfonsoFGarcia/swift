@@ -41,7 +41,7 @@ class CompressionMiddleware(object):
 		
 		if obj and req.method == 'GET' and is_success(resp.status_int):
 			
-			self.logger.debug(resp)
+			self.logger.debug(resp.body)
 			
 		return resp
 		
