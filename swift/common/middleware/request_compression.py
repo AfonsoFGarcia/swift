@@ -25,9 +25,6 @@ class CompressionMiddleware(object):
 		self.app = app
 		self.logger = get_logger(conf)
 	
-	def STORE(self, env):
-		body = bytearray(env['wsgi.input'].read(req.message_length))
-	
 	@wsgify
 	def __call__(self, req):
 		obj = None
@@ -40,8 +37,8 @@ class CompressionMiddleware(object):
 		resp = req.get_response(self.app)
 		
 		if obj and req.method == 'GET' and is_success(resp.status_int):
-			
-			self.logger.debug(resp.body)
+			body = bytearray(resp.body);
+			self.logger.debug(body)
 			
 		return resp
 		
