@@ -933,7 +933,7 @@ class BaseObjectController(Controller):
             write_header = req.headers.get('X-Write-To-Core')
             reader = None
             try:
-                reader = req.environ['rebuilt_file']
+                reader = req.environ['rebuilt_file'].read
             except KeyError:
                 reader = req.environ['wsgi.input'].read
             data_source = iter(lambda: reader(self.app.client_chunk_size), '')
