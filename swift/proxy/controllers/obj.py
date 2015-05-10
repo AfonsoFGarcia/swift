@@ -947,6 +947,8 @@ class BaseObjectController(Controller):
         outgoing_headers = self._backend_requests(
             req, len(nodes), container_partition, container_nodes,
             delete_at_container, delete_at_part, delete_at_nodes)
+            
+        self.logger.info(outgoing_headers);
 
         # send object to storage nodes
         resp = self._store_object(
