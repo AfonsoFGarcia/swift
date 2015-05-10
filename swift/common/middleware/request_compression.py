@@ -35,7 +35,12 @@ class CompressionMiddleware(object):
 			pass
 		
 		resp = req.get_response(self.app)
+		
+		self.logger.info("Get header")
+		
 		get_compressed = req.headers.get('X-Get-Compressed')
+		
+		self.logger.info("Got header")
 		
 		if get_compressed and obj and req.method == 'GET' and is_success(resp.status_int):
 			body = bytearray(resp.body);
