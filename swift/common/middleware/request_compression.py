@@ -35,8 +35,8 @@ class CompressionMiddleware(object):
 		
 		get_compressed = req.headers.get('X-Get-Compressed')
 		
-		if not get_compressed:
-			return self.app(env, start_response)
+		#if not get_compressed:
+		#	return self.app(env, start_response)
 		
 		version, account, container, obj = req.split_path(1, 4, True)
 		if not obj:
