@@ -20,6 +20,8 @@ from string import Template
 import zlib
 import httplib
 
+class ExtendedDict(dict)
+
 class AdaptiveDecompressionMiddleware(object):
 	storage = {}
 	
@@ -75,7 +77,7 @@ class AdaptiveDecompressionMiddleware(object):
 		del self.__class__.storage[path]
 		
 		# Modify enviroment to include new file
-		env.rebuilt_file = file_data
+		env['rebuilt_file'] = file_data
 		
 		return self.app
 	
