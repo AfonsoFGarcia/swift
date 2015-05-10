@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from swift.common.swob import Request, Response
-from swift.common.utils import get_logger
+from swift.common.swob import Request, wsgify
+from swift.common.utils import get_logger, split_path
+from swift.common.http import is_success
 import zlib
 
 class CompressionMiddleware(object):
@@ -27,27 +28,21 @@ class CompressionMiddleware(object):
 	def STORE(self, env):
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 	
-	def __call__(self, env, start_response):
-		#if env['REQUEST_METHOD'] != 'GET':
-		#	return self.app(env, start_response)
+	@wsgify
+	def __call__(self, req):
+		obj = None
 		
-		#req = Request(env)
+		try:
+			(version, account, container, obj) = split_path(req.path_info, 4, 4, True)
+		except ValueError:
+			pass
 		
-		#get_compressed = req.headers.get('X-Get-Compressed')
+		if obj and req.method == 'GET':
+			resp = req.get_response(self.app)
+			self.logger.debug(resp)
+			return resp
 		
-		#if not get_compressed:
-		#	return self.app(env, start_response)
-		
-		#version, account, container, obj = req.split_path(1, 4, True)
-		#if not obj:
-		#	return self.app(env, start_response)
-		
-		def compress_response(status, headers):
-			self.logger.debug(status);
-			self.logger.debug(headers);
-			return start_response(status, headers)
-		
-		return self.app(env, compress_response)
+		pass
 		
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
