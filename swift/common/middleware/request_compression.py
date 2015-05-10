@@ -37,12 +37,13 @@ class CompressionMiddleware(object):
 		except ValueError:
 			pass
 		
-		if obj and req.method == 'GET':
-			resp = req.get_response(self.app)
-			self.logger.debug(resp)
-			return resp
+		resp = req.get_response(self.app)
 		
-		pass
+		if obj and req.method == 'GET' and is_success(resp.status_int):
+			
+			self.logger.debug(resp)
+			
+		return resp
 		
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
