@@ -35,8 +35,9 @@ class CompressionMiddleware(object):
 			pass
 		
 		resp = req.get_response(self.app)
+		get_compressed = req.headers.get('X-Get-Compressed')
 		
-		if obj and req.method == 'GET' and is_success(resp.status_int):
+		if not get_compressed and obj and req.method == 'GET' and is_success(resp.status_int):
 			body = bytearray(resp.body);
 			def_body = zlib.compress(buffer(body, 0, len(body)))
 			resp.body = def_body
