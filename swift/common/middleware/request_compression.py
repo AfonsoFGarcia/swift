@@ -28,19 +28,19 @@ class CompressionMiddleware(object):
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 	
 	def __call__(self, env, start_response):
-		if env['REQUEST_METHOD'] != 'GET':
-			return self.app(env, start_response)
+		#if env['REQUEST_METHOD'] != 'GET':
+		#	return self.app(env, start_response)
 		
-		req = Request(env)
+		#req = Request(env)
 		
-		get_compressed = req.headers.get('X-Get-Compressed')
+		#get_compressed = req.headers.get('X-Get-Compressed')
 		
 		#if not get_compressed:
 		#	return self.app(env, start_response)
 		
-		version, account, container, obj = req.split_path(1, 4, True)
-		if not obj:
-			return self.app(env, start_response)
+		#version, account, container, obj = req.split_path(1, 4, True)
+		#if not obj:
+		#	return self.app(env, start_response)
 		
 		def compress_response(status, headers):
 			self.logger.debug(status);
