@@ -15,18 +15,18 @@
 
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
-from swift.common.storage import StorageThread
+from swift.common.storage import StorageThread, get_all, store
 from tempfile import TemporaryFile
 from string import Template
 import zlib
 
 class AdaptiveDecompressionMiddleware(object):
-	storage = StorageThread()
-	storage.start()
 	
 	def __init__(self, app, conf):
 		self.app = app
 		self.logger = get_logger(conf)
+		self.storage = StorageThread()
+		self.storage.start()
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -46,7 +46,7 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
 		# Store the chunk in memory
-		self.__class__.storage.put(path, chunk_index, chunk)
+		store(path, chunk_index, chunk, self.storage.uid)
 		
 		return Response(request=req, status=201)
 	
@@ -57,7 +57,7 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('Detected WRITE request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		all_chunks = self.__class__.storage.get_all(path)
+		all_chunks = get_all(path)
 		
 		if not all_chunks:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")

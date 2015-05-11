@@ -21,11 +21,16 @@ class StorageThread(threading.Thread):
 	
 	def run(self):
 		while True:
-			req, object_id = self.socket.recv()
+			req, object_id, chunk, chunk_data = self.socket.recv_multipart()
 			message = "404"
 			
 			if req == "GET":
 				message = pickle.dumps(self.get(object_id))
+			elif req == "PUT":
+				chunk_data = pickle.loads(chunk_data)
+				chunk = int(chunk)
+				self.put(object_id, chunk, chunk_data)
+				message = "OK"
 			
 			self.socket.send(message)
 	
@@ -44,24 +49,32 @@ class StorageThread(threading.Thread):
 			del self.storage[object_id]
 			return obj
 	
-	def get_all(self, object_id):
-		self.master_socket.send_multipart(["GET", object_id, "None"])
-		message = self.master_socket.recv()
-		server_list = pickle.loads(message)
-		
-		all_pieces = get(object_id)
-		
-		for uid in server_list:
-			if self.uid == uid:
-				continue
-			stor_socket = self.context.socket(zmq.REQ)
-			stor_socket.connect("tcp://localhost:%s" % str(50000 + uid))
-			stor_socket.send_multipart(["GET", object_id])
-			pieces = pickle.loads(stor_socket.recv())
-			all_pieces.update(pieces)
-		
-		self.master_socket.send_multipart(["DEL", object_id, "None"])
-		self.master_socket.recv()
-		
-		return all_pieces
-		
+def get_all(object_id):
+	context = zmq.Context()
+	master_socket = context.socket(zmq.REQ)
+	master_socket.connect("tcp://localhost:50000")
+	
+	master_socket.send_multipart(["GET", object_id, "None", "None"])
+	message = master_socket.recv()
+	server_list = pickle.loads(message)
+	
+	all_pieces = get(object_id)
+	
+	for uid in server_list:
+		stor_socket = context.socket(zmq.REQ)
+		stor_socket.connect("tcp://localhost:%s" % str(50000 + uid))
+		stor_socket.send_multipart(["GET", object_id])
+		pieces = pickle.loads(stor_socket.recv())
+		all_pieces.update(pieces)
+	
+	master_socket.send_multipart(["DEL", object_id, "None"])
+	master_socket.recv()
+	
+	return all_pieces
+
+def store(object_id, chunk, chunk_data, server_id):
+	context = zmq.Context()
+	stor_socket = context.socket(zmq.REQ)
+	stor_socket.connect("tcp://localhost:%s" % str(50000 + server_id))
+	stor_socket.send_multipart(["PUT", object_id, chunk, pickle.dumps(chunk_data)])
+	stor_socket.recv()
