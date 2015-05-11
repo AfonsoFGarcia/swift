@@ -12,12 +12,12 @@ class StorageThread(threading.Thread):
 		self.context = zmq.Context()
 		
 		self.master_socket = self.context.socket(zmq.REQ)
-		self.master_socket.connect("ipc://master")
+		self.master_socket.connect("tcp://localhost:50000")
 		self.master_socket.send_multipart(["UID", "None", "None"])
 		self.uid = int(self.master_socket.recv())
 	
 		self.socket = self.context.socket(zmq.REP)
-		self.socket.bind("ipc://storage/%s" % str(self.uid))
+		self.socket.bind("tcp://*:%s" % str(50000 + self.uid))
 	
 	def run(self):
 		while True:
@@ -52,7 +52,7 @@ class StorageThread(threading.Thread):
 def get_all(object_id):
 	context = zmq.Context()
 	master_socket = context.socket(zmq.REQ)
-	master_socket.connect("ipc://master")
+	master_socket.connect("tcp://localhost:50000")
 	
 	master_socket.send_multipart(["GET", object_id, "None"])
 	message = master_socket.recv()
@@ -62,7 +62,7 @@ def get_all(object_id):
 	
 	for uid in server_list:
 		stor_socket = context.socket(zmq.REQ)
-		stor_socket.connect("ipc://storage/%s" % str(uid))
+		stor_socket.connect("tcp://localhost:%s" % str(50000 + uid))
 		stor_socket.send_multipart(["GET", object_id, "None", "None"])
 		pieces = pickle.loads(stor_socket.recv())
 		all_pieces.update(pieces)
@@ -75,6 +75,6 @@ def get_all(object_id):
 def store(object_id, chunk, chunk_data, server_id):
 	context = zmq.Context()
 	stor_socket = context.socket(zmq.REQ)
-	stor_socket.connect("ipc://storate/%s" % str(server_id))
+	stor_socket.connect("tcp://localhost:%s" % str(50000 + server_id))
 	stor_socket.send_multipart(["PUT", object_id, str(chunk), pickle.dumps(chunk_data)])
 	stor_socket.recv()

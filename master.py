@@ -14,7 +14,7 @@ class MasterThread(threading.Thread):
 		
 		self.context = zmq.Context()
 		self.socket = self.context.socket(zmq.REP)
-		self.socket.bind("ipc://master")
+		self.socket.bind("tcp://*:50000")
 	
 	def run(self):
 		while True:
