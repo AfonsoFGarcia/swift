@@ -58,7 +58,7 @@ def get_all(object_id):
 	message = master_socket.recv()
 	server_list = pickle.loads(message)
 	
-	all_pieces = get(object_id)
+	all_pieces = {}
 	
 	for uid in server_list:
 		stor_socket = context.socket(zmq.REQ)
