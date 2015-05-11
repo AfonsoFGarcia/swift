@@ -14,7 +14,7 @@ class MasterThread(threading.Thread):
 		self.new_uid = 1
 		
 		self.context = zmq.Context()
-		self.socket = context.socket(zmq.REP)
+		self.socket = self.context.socket(zmq.REP)
 		self.socket.bind("tcp://*:50000")
 	
 	def run(self):
