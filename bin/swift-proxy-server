@@ -22,7 +22,9 @@ from swift.common.master import MasterThread
 if __name__ == '__main__':
     conf_file, options = parse_options()
     
+    exit_code = run_wsgi(conf_file, 'proxy-server', **options)
+    
     master = MasterThread()
     master.start()
     
-    sys.exit(run_wsgi(conf_file, 'proxy-server', **options))
+    sys.exit(exit_code)
