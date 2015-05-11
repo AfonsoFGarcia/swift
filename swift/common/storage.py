@@ -13,7 +13,7 @@ class StorageThread(threading.Thread):
 		
 		self.master_socket = self.context.socket(zmq.REQ)
 		self.master_socket.connect("tcp://localhost:50000")
-		self.master_socket.send_multipart(["UID"])
+		self.master_socket.send_multipart(["UID", "None"])
 		self.uid = int(self.master_socket.recv())
 	
 		self.socket = self.context.socket(zmq.REP)
