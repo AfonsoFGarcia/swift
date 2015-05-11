@@ -20,7 +20,7 @@ class StorageThread(threading.Thread):
 		self.socket.bind("tcp://*:%s" % str(50000 + self.uid))
 	
 	def run(self):
-		while self.execute:
+		while True:
 			req, object_id = self.socket.recv()
 			message = "404"
 			
