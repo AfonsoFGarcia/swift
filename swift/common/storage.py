@@ -63,7 +63,7 @@ def get_all(object_id):
 	for uid in server_list:
 		stor_socket = context.socket(zmq.REQ)
 		stor_socket.connect("tcp://localhost:%s" % str(50000 + uid))
-		stor_socket.send_multipart(["GET", object_id])
+		stor_socket.send_multipart(["GET", object_id, "None", "None"])
 		pieces = pickle.loads(stor_socket.recv())
 		all_pieces.update(pieces)
 	
