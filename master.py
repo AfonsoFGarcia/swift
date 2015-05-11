@@ -1,9 +1,10 @@
 import threading
+import zmq
+import daemon
 try:
 	import cPickle as pickle
 except:
 	import pickle
-import zmq
 
 class MasterThread(threading.Thread):
 	def __init__(self):
@@ -19,8 +20,6 @@ class MasterThread(threading.Thread):
 	def run(self):
 		while True:
 			req, object_id, uid = self.socket.recv_multipart()
-			
-			print("Received %s %s %s" % (req, object_id, uid))
 			
 			message = "404"
 			
@@ -41,16 +40,12 @@ class MasterThread(threading.Thread):
 				del self.storage[object_id]
 				message = "OK"
 			
-			print("Replying %s" % message)
-			
 			self.socket.send(message)
 		
 if __name__ == "__main__":
-	thread = MasterThread()
-	thread.daemon = True
-	thread.start()
-	try:
+	with daemon.DaemonContext():
+		thread = MasterThread()
+		thread.daemon = True
+		thread.start()
 		while True:
 			pass
-	except KeyboardInterrupt:
-		pass
