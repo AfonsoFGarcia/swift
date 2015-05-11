@@ -15,12 +15,14 @@
 
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
+from swift.proxy.storage.storage_thread import StorageThread
 from tempfile import TemporaryFile
 from string import Template
 import zlib
 
 class AdaptiveDecompressionMiddleware(object):
-	storage = {}
+	storage = StorageThread()
+	storage.start()
 	
 	def __init__(self, app, conf):
 		self.app = app
@@ -34,9 +36,6 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('Detected STORE request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		if not path in self.__class__.storage:
-			self.__class__.storage[path] = {}
-		
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 		
 		# Inflage the chunk
@@ -47,7 +46,7 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
 		# Store the chunk in memory
-		self.__class__.storage[path][chunk_index] = chunk
+		self.__class__.storage.put(path, chunk_index, chunk)
 		
 		return Response(request=req, status=201)
 	
@@ -58,20 +57,21 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('Detected WRITE request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		if not path in self.__class__.storage:
+		all_chunks = self.__class__.storage.get_all(path)
+		
+		if not all_chunks:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
 		# Get the chunks from memory and rebuild file
 		file_data = bytearray()
 		file_length = 0
 		
-		for chunk in self.__class__.storage[path].values():
+		for chunk in all_chunks.values():
 			for b in chunk:
 				file_data.append(b)
 			file_length = file_length + len(chunk)
 		
 		self.logger.debug(file_length)
-		del self.__class__.storage[path]
 		
 		tmp_file = TemporaryFile()
 		tmp_file.write(file_data)
