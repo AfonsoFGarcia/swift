@@ -76,5 +76,5 @@ def store(object_id, chunk, chunk_data, server_id):
 	context = zmq.Context()
 	stor_socket = context.socket(zmq.REQ)
 	stor_socket.connect("tcp://localhost:%s" % str(50000 + server_id))
-	stor_socket.send_multipart(["PUT", object_id, chunk, pickle.dumps(chunk_data)])
+	stor_socket.send_multipart(["PUT", object_id, str(chunk), pickle.dumps(chunk_data)])
 	stor_socket.recv()
