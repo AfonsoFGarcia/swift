@@ -33,6 +33,7 @@ class StorageThread(threading.Thread):
 		if not object_id in self.storage:
 			self.storage[object_id] = {}
 			self.master_socket.send_multipart(["PUT", object_id, str(self.uid)])
+			self.master_socket.recv()
 		self.storage[object_id][chunk] = data
 		
 	def get(self, object_id):
@@ -60,6 +61,7 @@ class StorageThread(threading.Thread):
 			all_pieces.update(pieces)
 		
 		self.master_socket.send_multipart(["DEL", object_id, "None"])
+		self.master_socket.recv()
 		
 		return all_pieces
 		
