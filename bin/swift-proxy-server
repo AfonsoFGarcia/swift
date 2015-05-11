@@ -25,7 +25,4 @@ if __name__ == '__main__':
     master = MasterThread()
     master.start()
     
-    exit_code = run_wsgi(conf_file, 'proxy-server', **options)
-    master.kill()
-    
-    sys.exit(exit_code)
+    sys.exit(run_wsgi(conf_file, 'proxy-server', **options))
