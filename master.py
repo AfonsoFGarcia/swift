@@ -21,6 +21,8 @@ class MasterThread(threading.Thread):
 		while self.execute:
 			req, object_id, uid = self.socket.recv_multipart()
 			
+			print("Received %s %s %s" % (req, object_id, uid))
+			
 			message = "404"
 			
 			if req == "UID":
@@ -40,6 +42,8 @@ class MasterThread(threading.Thread):
 				del self.storage[object_id]
 				message = "OK"
 			
+			print("Replying %s" % message)
+			
 			self.socket.send(message)
 	
 	def kill(self):
@@ -49,7 +53,8 @@ if __name__ == "__main__":
 	thread = MasterThread()
 	try:
 		thread.start()
+		thread.join()
 	except KeyboardInterrupt:
 		thread.kill()
-	finally:
 		thread.join()
+		
