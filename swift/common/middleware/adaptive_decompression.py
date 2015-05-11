@@ -15,7 +15,7 @@
 
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
-from swift.proxy.storage.storage import StorageThread
+from swift.common.storage import StorageThread
 from tempfile import TemporaryFile
 from string import Template
 import zlib

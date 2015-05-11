@@ -17,7 +17,7 @@
 import sys
 from swift.common.utils import parse_options
 from swift.common.wsgi import run_wsgi
-from swift.proxy.storage.master import MasterThread
+from swift.common.master import MasterThread
 
 if __name__ == '__main__':
     conf_file, options = parse_options()
