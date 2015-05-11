@@ -32,7 +32,7 @@ class StorageThread(threading.Thread):
 	def put(self, object_id, chunk, data):
 		if not object_id in self.storage:
 			self.storage[object_id] = {}
-			self.master_socket.send_multipart(["PUT", object_id, str(self.uid]))
+			self.master_socket.send_multipart(["PUT", object_id, str(self.uid)])
 		self.storage[object_id][chunk] = data
 		
 	def get(self, object_id):

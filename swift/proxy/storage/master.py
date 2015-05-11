@@ -24,7 +24,8 @@ class MasterThread(threading.Thread):
 			message = "404"
 			
 			if req == "UID":
-				message = str(self.new_uid++)
+				message = str(self.new_uid)
+				self.new_uid = self.new_uid + 1
 			elif req == "GET":
 				if object_id not in self.storage:
 					message = pickle.dumps([])
