@@ -44,3 +44,12 @@ class MasterThread(threading.Thread):
 	
 	def kill(self):
 		self.execute = False
+		
+if __name__ == "__main__":
+	thread = MasterThread()
+	try:
+		thread.start()
+	except KeyboardInterrupt:
+		thread.kill()
+	finally:
+		thread.join()
