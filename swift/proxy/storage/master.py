@@ -36,7 +36,7 @@ class MasterThread(threading.Thread):
 					self.storage[object_id] = []
 				self.storage[object_id].append(int(uid))
 				message = "OK"
-			elif req == "DEL"
+			elif req == "DEL":
 				del self.storage[object_id]
 				message = "OK"
 			
