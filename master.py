@@ -9,16 +9,15 @@ class MasterThread(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		
-		self.execute = True
 		self.storage = {}
 		self.new_uid = 1
 		
 		self.context = zmq.Context()
 		self.socket = self.context.socket(zmq.REP)
-		self.socket.bind("tcp://*:50000")
+		self.socket.bind("ipc://master")
 	
 	def run(self):
-		while self.execute:
+		while True:
 			req, object_id, uid = self.socket.recv_multipart()
 			
 			print("Received %s %s %s" % (req, object_id, uid))
@@ -45,16 +44,13 @@ class MasterThread(threading.Thread):
 			print("Replying %s" % message)
 			
 			self.socket.send(message)
-	
-	def kill(self):
-		self.execute = False
 		
 if __name__ == "__main__":
 	thread = MasterThread()
+	thread.daemon = True
+	thread.start()
 	try:
-		thread.start()
-		thread.join()
+		while True:
+			pass
 	except KeyboardInterrupt:
-		thread.kill()
-		thread.join()
 		
