@@ -26,6 +26,7 @@ class AdaptiveDecompressionMiddleware(object):
 		self.app = app
 		self.logger = get_logger(conf)
 		self.storage = StorageThread()
+		self.storage.daemon = True
 		self.storage.start()
 	
 	def STORE(self, env):
