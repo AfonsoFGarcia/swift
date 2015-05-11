@@ -54,7 +54,7 @@ def get_all(object_id):
 	master_socket = context.socket(zmq.REQ)
 	master_socket.connect("tcp://localhost:50000")
 	
-	master_socket.send_multipart(["GET", object_id, "None", "None"])
+	master_socket.send_multipart(["GET", object_id, "None"])
 	message = master_socket.recv()
 	server_list = pickle.loads(message)
 	
