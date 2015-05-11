@@ -13,7 +13,7 @@ class StorageThread(threading.Thread):
 		
 		self.master_socket = self.context.socket(zmq.REQ)
 		self.master_socket.connect("tcp://localhost:50000")
-		self.master_socket.send_multipart(["UID", "None"])
+		self.master_socket.send_multipart(["UID", "None", "None"])
 		self.uid = int(self.master_socket.recv())
 	
 		self.socket = self.context.socket(zmq.REP)
@@ -44,7 +44,7 @@ class StorageThread(threading.Thread):
 			return obj
 	
 	def get_all(self, object_id):
-		self.master_socket.send_multipart(["GET", object_id])
+		self.master_socket.send_multipart(["GET", object_id, "None"])
 		message = self.master_socket.recv()
 		server_list = pickle.loads(message)
 		
@@ -59,7 +59,7 @@ class StorageThread(threading.Thread):
 			pieces = pickle.loads(stor_socket.recv())
 			all_pieces.update(pieces)
 		
-		self.master_socket.send_multipart(["DEL", object_id])
+		self.master_socket.send_multipart(["DEL", object_id, "None"])
 		
 		return all_pieces
 		
