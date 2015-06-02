@@ -19,6 +19,7 @@ from tempfile import TemporaryFile
 from string import Template
 import zlib
 import sqlite3
+import sys
 try:
 	import cPickle as pickle
 except:
