@@ -80,13 +80,7 @@ class AdaptiveDecompressionMiddleware(object):
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
 		# Get the chunks from memory and rebuild file
-		file_data = bytearray()
-		file_length = 0
-		
-		for chunk in all_chunks.values():
-			for b in chunk:
-				file_data.append(b)
-			file_length = file_length + len(chunk)
+		file_data, file_length = all_chunks
 		
 		self.logger.debug(file_length)
 		
@@ -102,7 +96,9 @@ class AdaptiveDecompressionMiddleware(object):
 	
 	def get_all(self, path):
 		conn = sqlite3.connect('/dev/shm/adapt.db')
-		result = {}
+		count_rows = 0
+		file_data = bytearray()
+		file_length = 0
 		
 		with conn:
 			conn.text_factory = str
@@ -110,13 +106,21 @@ class AdaptiveDecompressionMiddleware(object):
 			query = (path,)
 			
 			for row in cur.execute('SELECT * FROM Data WHERE ID=? ORDER BY Chunk', query):
-				result[row[1]] = row[2]
+				count_rows = count_rows + 1
+				chunk = row[2]
+				for b in chunk:
+					file_data.append(b)
+				file_length = file_length + len(chunk)
 			
 			cur.execute('DELETE FROM DATA WHERE ID=?', query)
 			conn.commit()
 		
 		conn.close()
-		return result
+		
+		if count_rows == 0:
+			return None
+		else:
+			return (file_data, file_length)
 	
 	def __call__(self, env, start_response):
 		if env['REQUEST_METHOD'] != 'PUT':
