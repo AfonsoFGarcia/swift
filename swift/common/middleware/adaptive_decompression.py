@@ -30,6 +30,16 @@ class AdaptiveDecompressionMiddleware(object):
 	def __init__(self, app, conf):
 		self.app = app
 		self.logger = get_logger(conf)
+		
+		conn = sqlite3.connect('/dev/shm/adapt.db')
+		
+		with conn:
+			cur = conn.cursor()
+			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID TEXT, Chunk INT, Data TEXT)')
+			cur.execute('CREATE UNIQUE INDEX IF NOT EXISTS DataIndex ON Data(ID, Chunk)')
+			conn.commit()
+		
+		conn.close()
 	
 	def STORE(self, env):
 		req = Request(env)
