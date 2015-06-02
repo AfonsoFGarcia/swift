@@ -56,6 +56,7 @@ class AdaptiveDecompressionMiddleware(object):
 		conn = sqlite3.connect('/dev/shm/adapt.db')
 		
 		with conn:
+			conn.text_factory = str
 			cur = conn.cursor()
 			store = (path, chunk_index, chunk)
 			cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
