@@ -48,15 +48,21 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('$nchunk : $length')
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
-		# Store the chunk in memory
-		conn = sqlite3.connect('/dev/shm/adapt.db')
-		
-		with conn:
-			store = (path, chunk_index, pickle.dumps(chunk))
-			cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
-			conn.commit()
-		
-		conn.close()
+		try:
+			# Store the chunk in memory
+			conn = sqlite3.connect('/dev/shm/adapt.db')
+			
+			with conn:
+				cur = conn.cursor()
+				store = (path, chunk_index, pickle.dumps(chunk))
+				cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
+				conn.commit()
+			
+			conn.close()
+		except:
+			info = Template('Unexpected error: $error')
+			self.logger.debug(info.substitute(error=sys.exc_info()[0]))
+			return Response(request=req, status=500)
 		
 		return Response(request=req, status=201)
 	
