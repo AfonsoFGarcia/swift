@@ -16,6 +16,7 @@
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
 from string import Template
+from tempfile import TemporaryFile
 import zlib
 import sqlite3
 
