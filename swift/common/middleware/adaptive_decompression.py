@@ -114,6 +114,7 @@ class AdaptiveDecompressionMiddleware(object):
 		result = {}
 		
 		with conn:
+			conn.text_factory = str
 			cur = conn.cursor()
 			query = (path,)
 			
