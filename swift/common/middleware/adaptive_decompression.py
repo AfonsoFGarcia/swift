@@ -105,12 +105,14 @@ class AdaptiveDecompressionMiddleware(object):
 			cur = conn.cursor()
 			query = (path,)
 			
-			for row in cur.execute('SELECT * FROM Data WHERE ID=? ORDER BY Chunk', query):
+			res = cur.execute('SELECT * FROM Data WHERE ID=? ORDER BY Chunk', query)
+			
+			for row in res:
 				chunk = row[2]
 				for b in chunk:
 					file_data.append(b)
 				file_length = file_length + len(chunk)
-			count_rows = cur.rowcount
+			count_rows = res.rowcount
 			
 			cur.execute('DELETE FROM DATA WHERE ID=?', query)
 			conn.commit()
