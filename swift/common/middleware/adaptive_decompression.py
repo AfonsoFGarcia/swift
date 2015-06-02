@@ -58,6 +58,8 @@ class AdaptiveDecompressionMiddleware(object):
 			
 			conn.close()
 		except:
+			info = Template('Unexpected error: $error')
+			self.logger.debug(info.substitute(error=sys.exc_info()[0]))
 			return Response(request=req, status=500)
 		
 		return Response(request=req, status=201)
