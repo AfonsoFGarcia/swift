@@ -15,15 +15,9 @@
 
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
-from tempfile import TemporaryFile
 from string import Template
 import zlib
 import sqlite3
-import sys
-try:
-	import cPickle as pickle
-except:
-	import pickle
 
 class AdaptiveDecompressionMiddleware(object):
 	
@@ -52,27 +46,22 @@ class AdaptiveDecompressionMiddleware(object):
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 		
 		# Inflage the chunk
-		chunk = bytearray(zlib.decompress(buffer(body, 0, len(body))))
+		chunk = zlib.decompress(buffer(body, 0, len(body)))
 		
 		# Debug Info
 		info = Template('$nchunk : $length')
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
-		try:
-			# Store the chunk in memory
-			conn = sqlite3.connect('/dev/shm/adapt.db')
-			
-			with conn:
-				cur = conn.cursor()
-				store = (path, chunk_index, pickle.dumps(chunk))
-				cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
-				conn.commit()
-			
-			conn.close()
-		except:
-			info = Template('Unexpected error: $error')
-			self.logger.debug(info.substitute(error=sys.exc_info()[0]))
-			return Response(request=req, status=500)
+		# Store the chunk in memory
+		conn = sqlite3.connect('/dev/shm/adapt.db')
+		
+		with conn:
+			cur = conn.cursor()
+			store = (path, chunk_index, chunk)
+			cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
+			conn.commit()
+		
+		conn.close()
 		
 		return Response(request=req, status=201)
 	
@@ -119,7 +108,7 @@ class AdaptiveDecompressionMiddleware(object):
 			query = (path,)
 			
 			for row in cur.execute('SELECT * FROM Data WHERE ID=? ORDER BY Chunk', query):
-				result[row[1]] = pickle.loads(row[2])
+				result[row[1]] = row[2]
 			
 			cur.execute('DELETE FROM DATA WHERE ID=?', query)
 			conn.commit()
