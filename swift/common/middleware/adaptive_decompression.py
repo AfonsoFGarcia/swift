@@ -15,19 +15,20 @@
 
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
-from swift.common.storage import StorageThread, get_all, store
 from tempfile import TemporaryFile
 from string import Template
 import zlib
+import sqlite3
+try:
+	import cPickle as pickle
+except:
+	import pickle
 
 class AdaptiveDecompressionMiddleware(object):
 	
 	def __init__(self, app, conf):
 		self.app = app
 		self.logger = get_logger(conf)
-		self.storage = StorageThread()
-		self.storage.daemon = True
-		self.storage.start()
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -46,8 +47,18 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('$nchunk : $length')
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
-		# Store the chunk in memory
-		store(path, chunk_index, chunk, self.storage.uid)
+		try:
+			# Store the chunk in memory
+			conn = sqlite3.connect('/dev/shm/adapt.db')
+			
+			with conn:
+				store = (path, chunk_index, pickle.dumps(chunk))
+				cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
+				conn.commit()
+			
+			conn.close()
+		except:
+			return Response(request=req, status=500)
 		
 		return Response(request=req, status=201)
 	
@@ -58,7 +69,7 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('Detected WRITE request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		all_chunks = get_all(path)
+		all_chunks = self.get_all(path)
 		
 		if not all_chunks:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
@@ -83,6 +94,23 @@ class AdaptiveDecompressionMiddleware(object):
 		env['rebuilt_file_size'] = file_length
 		
 		return self.app
+	
+	def get_all(self, path):
+		conn = sqlite3.connect('/dev/shm/adapt.db')
+		result = {}
+		
+		with conn:
+			cur = conn.cursor()
+			query = (path,)
+			
+			for row in cur.execute('SELECT * FROM Data WHERE ID=? ORDER BY Chunk', query):
+				result[row[1]] = pickle.loads(row[2])
+			
+			cur.execute('DELETE FROM DATA WHERE ID=?', query)
+			conn.commit()
+		
+		conn.close()
+		return result
 	
 	def __call__(self, env, start_response):
 		if env['REQUEST_METHOD'] != 'PUT':
