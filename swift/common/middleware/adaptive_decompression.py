@@ -18,7 +18,8 @@ from swift.common.utils import get_logger
 from string import Template
 from tempfile import TemporaryFile
 import zlib
-import sqlite3
+import MySQLdb
+import hashlib
 
 class AdaptiveDecompressionMiddleware(object):
 	
@@ -26,14 +27,12 @@ class AdaptiveDecompressionMiddleware(object):
 		self.app = app
 		self.logger = get_logger(conf)
 		
-		self.conn = sqlite3.connect('/dev/shm/adapt.db')
-		self.conn.execute('PRAGMA synchronous=OFF')
-		self.conn.execute('PRAGMA journal_mode=MEMORY')
+		self.conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
 		self.conn.text_factory = str
 
 		with self.conn:
 			cur = self.conn.cursor()
-			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID TEXT, Chunk INT, Data TEXT')
+			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID CHAR(40), Chunk INT, Data MEDIUMTEXT, UNIQUE(ID, Chunk))')
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -56,7 +55,8 @@ class AdaptiveDecompressionMiddleware(object):
 		with self.conn:
 			
 			cur = self.conn.cursor()
-			store = (path, chunk_index, chunk)
+			path_hash = hashlib.sha1(path).hexdigest()
+			store = (path_hash, chunk_index, chunk)
 			cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
 		
 		return Response(request=req, status=201)
@@ -95,7 +95,8 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		with self.conn:
 			cur = self.conn.cursor()
-			query = (path,)
+			path_hash = hashlib.sha1(path).hexdigest()
+			query = (path_hash,)
 			
 			for row in cur.execute('SELECT * FROM Data WHERE ID=? ORDER BY Chunk', query):
 				count_rows = count_rows + 1
