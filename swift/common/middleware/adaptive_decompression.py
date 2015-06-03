@@ -58,7 +58,7 @@ class AdaptiveDecompressionMiddleware(object):
 			path_hash = hashlib.sha1(path).hexdigest()
 			store = (path_hash, chunk_index, chunk)
 			self.logger.debug(path_hash);
-			self.logger.debug(chunk);
+			self.logger.debug(chunk is str);
 			query = "INSERT INTO Data VALUES('%s','%d','%s')" % store
 			cur.execute(query)
 		
