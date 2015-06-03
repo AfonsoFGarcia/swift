@@ -26,15 +26,15 @@ class AdaptiveDecompressionMiddleware(object):
 		self.app = app
 		self.logger = get_logger(conf)
 		
-		conn = sqlite3.connect('/dev/shm/adapt.db')
-		
-		with conn:
-			cur = conn.cursor()
+		self.conn = sqlite3.connect('/dev/shm/adapt.db')
+		self.conn.execute('PRAGMA synchronous=OFF')
+		self.conn.text_factory = str
+
+		with self.conn:
+			cur = self.conn.cursor()
 			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID TEXT, Chunk INT, Data TEXT)')
 			cur.execute('CREATE UNIQUE INDEX IF NOT EXISTS DataIndex ON Data(ID, Chunk)')
-			conn.commit()
-		
-		conn.close()
+			self.conn.commit()
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -54,16 +54,12 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
 		# Store the chunk in memory
-		conn = sqlite3.connect('/dev/shm/adapt.db')
-		
-		with conn:
-			conn.text_factory = str
-			cur = conn.cursor()
+		with self.conn:
+			
+			cur = self.conn.cursor()
 			store = (path, chunk_index, chunk)
 			cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
-			conn.commit()
-		
-		conn.close()
+			self.conn.commit()
 		
 		return Response(request=req, status=201)
 	
@@ -95,14 +91,12 @@ class AdaptiveDecompressionMiddleware(object):
 		return self.app
 	
 	def get_all(self, path):
-		conn = sqlite3.connect('/dev/shm/adapt.db')
 		count_rows = 0
 		file_data = bytearray()
 		file_length = 0
 		
-		with conn:
-			conn.text_factory = str
-			cur = conn.cursor()
+		with self.conn:
+			cur = self.conn.cursor()
 			query = (path,)
 			
 			for row in cur.execute('SELECT * FROM Data WHERE ID=? ORDER BY Chunk', query):
@@ -113,9 +107,7 @@ class AdaptiveDecompressionMiddleware(object):
 				file_length = file_length + len(chunk)
 			
 			cur.execute('DELETE FROM DATA WHERE ID=?', query)
-			conn.commit()
-		
-		conn.close()
+			self.conn.commit()
 		
 		if count_rows == 0:
 			return None
