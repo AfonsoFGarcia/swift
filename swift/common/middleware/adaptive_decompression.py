@@ -57,7 +57,8 @@ class AdaptiveDecompressionMiddleware(object):
 			cur = self.conn.cursor()
 			path_hash = hashlib.sha1(path).hexdigest()
 			store = [path_hash, chunk_index, chunk]
-			cur.execute("INSERT INTO Data VALUES(%s,%d,%s)", store)
+			query = "INSERT INTO Data VALUES('%s','%d','%s')" % store
+			cur.execute(query)
 		
 		return Response(request=req, status=201)
 	
