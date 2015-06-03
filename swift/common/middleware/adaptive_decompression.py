@@ -99,8 +99,9 @@ class AdaptiveDecompressionMiddleware(object):
 			cur = self.conn.cursor()
 			path_hash = (hashlib.sha1(path).hexdigest(),)
 			
-			for row in cur.execute("SELECT * FROM Data WHERE ID=%s ORDER BY Chunk", path_hash):
-				count_rows = count_rows + 1
+			count_rows = cur.execute("SELECT * FROM Data WHERE ID=%s ORDER BY Chunk", path_hash)
+			
+			for row in self.conn.fetchall():
 				chunk = row[2]
 				for b in chunk:
 					file_data.append(b)
@@ -108,7 +109,7 @@ class AdaptiveDecompressionMiddleware(object):
 			
 			cur.execute("DELETE FROM DATA WHERE ID=%s", path_hash)
 		
-		if count_rows == 0:
+		if count_rows <= 0:
 			return None
 		else:
 			return (file_data, file_length)
