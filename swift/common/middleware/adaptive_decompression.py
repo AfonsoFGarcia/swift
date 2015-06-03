@@ -59,8 +59,7 @@ class AdaptiveDecompressionMiddleware(object):
 			store = (path_hash, chunk_index, chunk)
 			self.logger.debug(path_hash);
 			self.logger.debug(chunk is str);
-			query = "INSERT INTO Data VALUES('%s','%d','%s')" % store
-			cur.execute(query)
+			cur.execute("INSERT INTO Data VALUES(%s,%d,%s)", store)
 		
 		return Response(request=req, status=201)
 	
