@@ -33,9 +33,7 @@ class AdaptiveDecompressionMiddleware(object):
 
 		with self.conn:
 			cur = self.conn.cursor()
-			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID TEXT, Chunk INT, Data TEXT)')
-			cur.execute('CREATE UNIQUE INDEX IF NOT EXISTS DataIndex ON Data(ID, Chunk)')
-			self.conn.commit()
+			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID TEXT, Chunk INT, Data TEXT, UNIQUE(ID, Chunk) ON CONFLICT FAIL)')
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -60,7 +58,6 @@ class AdaptiveDecompressionMiddleware(object):
 			cur = self.conn.cursor()
 			store = (path, chunk_index, chunk)
 			cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
-			self.conn.commit()
 		
 		return Response(request=req, status=201)
 	
@@ -108,7 +105,6 @@ class AdaptiveDecompressionMiddleware(object):
 				file_length = file_length + len(chunk)
 			
 			cur.execute('DELETE FROM DATA WHERE ID=?', query)
-			self.conn.commit()
 		
 		if count_rows == 0:
 			return None
