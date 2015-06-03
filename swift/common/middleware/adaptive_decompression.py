@@ -28,6 +28,7 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger = get_logger(conf)
 		
 		self.conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
+		self.conn.text_factory = str
 
 		with self.conn:
 			cur = self.conn.cursor()
@@ -58,7 +59,7 @@ class AdaptiveDecompressionMiddleware(object):
 			store = (path_hash, chunk_index, chunk)
 			self.logger.debug(path_hash);
 			self.logger.debug(chunk is str);
-			cur.execute("INSERT INTO Data VALUES(%s,%d,%s)", store)
+			cur.execute("INSERT INTO Data VALUES(%s,%s,%s)", store)
 		
 		return Response(request=req, status=201)
 	
@@ -98,16 +99,14 @@ class AdaptiveDecompressionMiddleware(object):
 			cur = self.conn.cursor()
 			path_hash = hashlib.sha1(path).hexdigest()
 			
-			query = "SELECT * FROM Data WHERE ID=%s ORDER BY Chunk" % path_hash
-			for row in cur.execute(query):
+			for row in cur.execute("SELECT * FROM Data WHERE ID=%s ORDER BY Chunk", path_hash):
 				count_rows = count_rows + 1
 				chunk = row[2]
 				for b in chunk:
 					file_data.append(b)
 				file_length = file_length + len(chunk)
 			
-			query = "DELETE FROM DATA WHERE ID=%s" % path_hash
-			cur.execute(query)
+			cur.execute("DELETE FROM DATA WHERE ID=%s", path_hash)
 		
 		if count_rows == 0:
 			return None
