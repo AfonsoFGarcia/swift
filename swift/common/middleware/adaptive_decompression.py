@@ -97,7 +97,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		with self.conn:
 			cur = self.conn.cursor()
-			path_hash = hashlib.sha1(path).hexdigest()
+			path_hash = (hashlib.sha1(path).hexdigest(),)
 			
 			for row in cur.execute("SELECT * FROM Data WHERE ID=%s ORDER BY Chunk", path_hash):
 				count_rows = count_rows + 1
