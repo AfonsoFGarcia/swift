@@ -56,8 +56,8 @@ class AdaptiveDecompressionMiddleware(object):
 			
 			cur = self.conn.cursor()
 			path_hash = hashlib.sha1(path).hexdigest()
-			store = (path_hash, chunk_index, chunk)
-			cur.execute("INSERT INTO Data VALUES('%s','%d','%s')", store)
+			store = [path_hash, chunk_index, chunk]
+			cur.execute("INSERT INTO Data VALUES(%s,%d,%s)", store)
 		
 		return Response(request=req, status=201)
 	
@@ -96,16 +96,16 @@ class AdaptiveDecompressionMiddleware(object):
 		with self.conn:
 			cur = self.conn.cursor()
 			path_hash = hashlib.sha1(path).hexdigest()
-			query = (path_hash,)
+			query = [path_hash]
 			
-			for row in cur.execute("SELECT * FROM Data WHERE ID='%s' ORDER BY Chunk", query):
+			for row in cur.execute("SELECT * FROM Data WHERE ID=%s ORDER BY Chunk", query):
 				count_rows = count_rows + 1
 				chunk = row[2]
 				for b in chunk:
 					file_data.append(b)
 				file_length = file_length + len(chunk)
 			
-			cur.execute("DELETE FROM DATA WHERE ID='%s'", query)
+			cur.execute("DELETE FROM DATA WHERE ID=%s", query)
 		
 		if count_rows == 0:
 			return None
