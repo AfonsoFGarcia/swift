@@ -101,7 +101,7 @@ class AdaptiveDecompressionMiddleware(object):
 			
 			count_rows = cur.execute("SELECT * FROM Data WHERE ID=%s ORDER BY Chunk", path_hash)
 			
-			for row in self.conn.fetchall():
+			for row in cur.fetchall():
 				chunk = row[2]
 				for b in chunk:
 					file_data.append(b)
