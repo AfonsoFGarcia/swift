@@ -28,6 +28,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		self.conn = sqlite3.connect('/dev/shm/adapt.db')
 		self.conn.execute('PRAGMA synchronous=OFF')
+		self.conn.execute('PRAGMA journal_mode=MEMORY')
 		self.conn.text_factory = str
 
 		with self.conn:
