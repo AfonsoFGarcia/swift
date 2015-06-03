@@ -32,7 +32,7 @@ class AdaptiveDecompressionMiddleware(object):
 
 		with self.conn:
 			cur = self.conn.cursor()
-			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID CHAR(40), Chunk INT, Data MEDIUMBLOB, UNIQUE(ID, Chunk))')
+			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID CHAR(40), Chunk INT, Data MEDIUMBLOB)')
 	
 	def STORE(self, env):
 		req = Request(env)
