@@ -107,7 +107,7 @@ class AdaptiveDecompressionMiddleware(object):
 					file_data.append(b)
 				file_length = file_length + len(chunk)
 			
-			cur.execute("DELETE FROM DATA WHERE ID=%s", path_hash)
+			cur.execute("DELETE FROM Data WHERE ID=%s", path_hash)
 		
 		if count_rows <= 0:
 			return None
