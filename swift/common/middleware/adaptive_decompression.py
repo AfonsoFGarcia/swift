@@ -61,9 +61,8 @@ class AdaptiveDecompressionMiddleware(object):
 				store = (path_hash, chunk_index, chunk)
 				self.logger.debug(path_hash);
 				cur.execute("INSERT INTO Data VALUES('%s',%s,'%s')", store)
-		except:
-			t, value, tb = sys.exc_info()
-			print value.message
+		except Exception, e:
+			self.logger.error(str(e));
 			return Response(request=req, status=500)
 		
 		return Response(request=req, status=201)
