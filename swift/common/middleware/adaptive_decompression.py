@@ -20,6 +20,7 @@ from tempfile import TemporaryFile
 import zlib
 import MySQLdb
 import hashlib
+import sys
 
 class AdaptiveDecompressionMiddleware(object):
 	
@@ -51,14 +52,18 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('$nchunk : $length')
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
-		# Store the chunk in memory
-		with self.conn:
-			
-			cur = self.conn.cursor()
-			path_hash = hashlib.sha1(path).hexdigest()
-			store = (path_hash, chunk_index, chunk)
-			self.logger.debug(path_hash);
-			cur.execute("INSERT INTO Data VALUES('%s',%s,'%s')", store)
+		try:
+			# Store the chunk in memory
+			with self.conn:
+				
+				cur = self.conn.cursor()
+				path_hash = hashlib.sha1(path).hexdigest()
+				store = (path_hash, chunk_index, chunk)
+				self.logger.debug(path_hash);
+				cur.execute("INSERT INTO Data VALUES('%s',%s,'%s')", store)
+		except:
+			print sys.exc_info()[0]
+			return Response(request=req, status=500)
 		
 		return Response(request=req, status=201)
 	
