@@ -28,12 +28,14 @@ class AdaptiveDecompressionMiddleware(object):
 		self.app = app
 		self.logger = get_logger(conf)
 		
-		self.conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
-		self.conn.text_factory = str
+		conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
+		conn.text_factory = str
 
-		with self.conn:
-			cur = self.conn.cursor()
+		with conn:
+			cur = conn.cursor()
 			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID CHAR(40), Chunk INT, Data MEDIUMBLOB)')
+
+		conn.close()
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -53,14 +55,17 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
 		try:
+			conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
+			conn.text_factory = str
+
 			# Store the chunk in memory
-			with self.conn:
-				self.conn.ping(True)
-				cur = self.conn.cursor()
+			with conn:
+				cur = conn.cursor()
 				path_hash = hashlib.sha1(path).hexdigest()
 				store = (path_hash, chunk_index, chunk)
-				self.logger.debug(path_hash);
 				cur.execute("INSERT INTO Data VALUES('%s',%s,'%s')", store)
+
+			conn.close()
 		except Exception, e:
 			self.logger.error(str(e));
 			return Response(request=req, status=500)
@@ -99,9 +104,11 @@ class AdaptiveDecompressionMiddleware(object):
 		file_data = bytearray()
 		file_length = 0
 		
-		with self.conn:
-			self.conn.ping(True)
-			cur = self.conn.cursor()
+		conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
+		conn.text_factory = str
+
+		with conn:
+			cur = conn.cursor()
 			path_hash = (hashlib.sha1(path).hexdigest(),)
 			
 			count_rows = cur.execute("SELECT * FROM Data WHERE ID='%s' ORDER BY Chunk", path_hash)
@@ -113,6 +120,8 @@ class AdaptiveDecompressionMiddleware(object):
 				file_length = file_length + len(chunk)
 			
 			cur.execute("DELETE FROM Data WHERE ID='%s'", path_hash)
+		
+		conn.close()
 		
 		if count_rows <= 0:
 			return None
