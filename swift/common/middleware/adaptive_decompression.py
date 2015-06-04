@@ -27,7 +27,7 @@ class AdaptiveDecompressionMiddleware(object):
 		self.app = app
 		self.logger = get_logger(conf)
 		
-		self.conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
+		self.conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt', cursorclass=MySQLdb.cursors.SSCursor)
 		self.conn.text_factory = str
 
 		with self.conn:
