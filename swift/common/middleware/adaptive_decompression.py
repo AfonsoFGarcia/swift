@@ -16,7 +16,7 @@
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
 from string import Template
-from tempfile import TemporaryFile
+from tempfile import SpooledTemporaryFile
 import zlib
 import MySQLdb
 import hashlib
@@ -76,23 +76,19 @@ class AdaptiveDecompressionMiddleware(object):
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
 		# Get the chunks from memory and rebuild file
-		file_data, file_length = all_chunks
+		tmp_file, file_length = all_chunks
 		
 		self.logger.debug(file_length)
-		
-		tmp_file = TemporaryFile()
-		tmp_file.write(file_data)
-		tmp_file.seek(0)
 		
 		# Modify enviroment to include new file
 		env['rebuilt_file'] = tmp_file
 		env['rebuilt_file_size'] = file_length
 		
-		return self.app
+		return (tmp_file, self.app)
 	
 	def get_all(self, path):
 		count_rows = 0
-		file_data = bytearray()
+		file_data = SpooledTemporaryFile()
 		file_length = 0
 		
 		with self.conn:
@@ -103,10 +99,11 @@ class AdaptiveDecompressionMiddleware(object):
 			
 			for row in cur.fetchall():
 				chunk = row[2]
-				for b in chunk:
-					file_data.append(b)
+				file_data.write(chunk)
 				file_length = file_length + len(chunk)
-			
+
+			file_data.seek(0)
+
 			cur.execute("DELETE FROM Data WHERE ID=%s", path_hash)
 		
 		if count_rows <= 0:
@@ -131,14 +128,19 @@ class AdaptiveDecompressionMiddleware(object):
 			return self.app(env, start_response)
 		
 		handler = None
+		tmp_file = None
 		
 		if to_write:
-			handler = self.WRITE
+			tmp_file, handler = self.WRITE
 		
 		if chunk_index:
 			handler = self.STORE
 		
-		return handler(env)(env, start_response)
+		result = handler(env)(env, start_response)
+
+		tmp_file.close()
+
+		return result;
 		
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
