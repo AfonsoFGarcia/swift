@@ -20,7 +20,6 @@ from tempfile import TemporaryFile
 import zlib
 import MySQLdb
 import hashlib
-import sys
 
 class AdaptiveDecompressionMiddleware(object):
 	
@@ -34,7 +33,6 @@ class AdaptiveDecompressionMiddleware(object):
 		with self.conn:
 			cur = self.conn.cursor()
 			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID CHAR(40), Chunk INT, Data MEDIUMBLOB)')
-			self.conn.commit()
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -53,17 +51,15 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('$nchunk : $length')
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
-		try:
-			# Store the chunk in memory
-			with self.conn:
-				cur = self.conn.cursor()
-				path_hash = hashlib.sha1(path).hexdigest()
-				store = (path_hash, chunk_index, chunk)
-				cur.execute("INSERT INTO Data VALUES('%s',%s,'%s')", store)
-				self.conn.commit()
-		except Exception, e:
-			self.logger.error(str(e));
-			return Response(request=req, status=500)
+		# Store the chunk in memory
+		with self.conn:
+			
+			cur = self.conn.cursor()
+			path_hash = hashlib.sha1(path).hexdigest()
+			store = (path_hash, chunk_index, chunk)
+			self.logger.debug(path_hash);
+			self.logger.debug(chunk is str);
+			cur.execute("INSERT INTO Data VALUES(%s,%s,%s)", store)
 		
 		return Response(request=req, status=201)
 	
@@ -98,12 +94,12 @@ class AdaptiveDecompressionMiddleware(object):
 		count_rows = 0
 		file_data = bytearray()
 		file_length = 0
-
+		
 		with self.conn:
 			cur = self.conn.cursor()
 			path_hash = (hashlib.sha1(path).hexdigest(),)
 			
-			count_rows = cur.execute("SELECT * FROM Data WHERE ID='%s' ORDER BY Chunk", path_hash)
+			count_rows = cur.execute("SELECT * FROM Data WHERE ID=%s ORDER BY Chunk", path_hash)
 			
 			for row in cur.fetchall():
 				chunk = row[2]
@@ -111,9 +107,8 @@ class AdaptiveDecompressionMiddleware(object):
 					file_data.append(b)
 				file_length = file_length + len(chunk)
 			
-			cur.execute("DELETE FROM Data WHERE ID='%s'", path_hash)
-			self.conn.commit()
-				
+			cur.execute("DELETE FROM Data WHERE ID=%s", path_hash)
+		
 		if count_rows <= 0:
 			return None
 		else:
