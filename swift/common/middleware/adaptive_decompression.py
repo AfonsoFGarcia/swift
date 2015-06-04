@@ -28,14 +28,13 @@ class AdaptiveDecompressionMiddleware(object):
 		self.app = app
 		self.logger = get_logger(conf)
 		
-		conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
-		conn.text_factory = str
+		self.conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
+		self.conn.text_factory = str
 
-		with conn:
-			cur = conn.cursor()
+		with self.conn:
+			cur = self.conn.cursor()
 			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID CHAR(40), Chunk INT, Data MEDIUMBLOB)')
-
-		conn.close()
+			self.conn.commit()
 	
 	def STORE(self, env):
 		req = Request(env)
@@ -55,17 +54,13 @@ class AdaptiveDecompressionMiddleware(object):
 		self.logger.debug(info.substitute(nchunk=chunk_index, length=len(chunk)))
 		
 		try:
-			conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
-			conn.text_factory = str
-
 			# Store the chunk in memory
-			with conn:
-				cur = conn.cursor()
+			with self.conn:
+				cur = self.conn.cursor()
 				path_hash = hashlib.sha1(path).hexdigest()
 				store = (path_hash, chunk_index, chunk)
 				cur.execute("INSERT INTO Data VALUES('%s',%s,'%s')", store)
-
-			conn.close()
+				self.conn.commit()
 		except Exception, e:
 			self.logger.error(str(e));
 			return Response(request=req, status=500)
@@ -103,12 +98,9 @@ class AdaptiveDecompressionMiddleware(object):
 		count_rows = 0
 		file_data = bytearray()
 		file_length = 0
-		
-		conn = MySQLdb.connect(host='localhost', user='adapt', passwd='adapt', db='adapt')
-		conn.text_factory = str
 
-		with conn:
-			cur = conn.cursor()
+		with self.conn:
+			cur = self.conn.cursor()
 			path_hash = (hashlib.sha1(path).hexdigest(),)
 			
 			count_rows = cur.execute("SELECT * FROM Data WHERE ID='%s' ORDER BY Chunk", path_hash)
@@ -120,9 +112,8 @@ class AdaptiveDecompressionMiddleware(object):
 				file_length = file_length + len(chunk)
 			
 			cur.execute("DELETE FROM Data WHERE ID='%s'", path_hash)
-		
-		conn.close()
-		
+			self.conn.commit()
+				
 		if count_rows <= 0:
 			return None
 		else:
