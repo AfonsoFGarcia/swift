@@ -55,7 +55,7 @@ class AdaptiveDecompressionMiddleware(object):
 		try:
 			# Store the chunk in memory
 			with self.conn:
-				
+				self.conn.ping(True)
 				cur = self.conn.cursor()
 				path_hash = hashlib.sha1(path).hexdigest()
 				store = (path_hash, chunk_index, chunk)
@@ -100,6 +100,7 @@ class AdaptiveDecompressionMiddleware(object):
 		file_length = 0
 		
 		with self.conn:
+			self.conn.ping(True)
 			cur = self.conn.cursor()
 			path_hash = (hashlib.sha1(path).hexdigest(),)
 			
