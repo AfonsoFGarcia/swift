@@ -16,7 +16,7 @@
 from swift.common.swob import Request, Response
 from swift.common.utils import get_logger
 from string import Template
-from tempfile import SpooledTemporaryFile
+import cStringIO as StringIO
 import zlib
 import MySQLdb
 import hashlib
@@ -88,7 +88,7 @@ class AdaptiveDecompressionMiddleware(object):
 	
 	def get_all(self, path):
 		count_rows = 0
-		file_data = SpooledTemporaryFile()
+		file_data = StringIO.StringIO()
 		file_length = 0
 		
 		with self.conn:
