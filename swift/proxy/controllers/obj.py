@@ -817,12 +817,15 @@ class BaseObjectController(Controller):
             self.app.logger.exception(
                 _('ERROR Exception causing client disconnect'))
             raise HTTPClientDisconnect(request=req)
-        if req.content_length and bytes_transferred < req.content_length:
-            req.client_disconnect = True
-            self.app.logger.warn(
-                _('Client disconnected without sending enough data'))
-            self.app.logger.increment('client_disconnects')
-            raise HTTPClientDisconnect(request=req)
+        try:
+            req.environ['rebuilt_file']
+        except KeyError:
+            if req.content_length and bytes_transferred < req.content_length:
+                req.client_disconnect = True
+                self.app.logger.warn(
+                    _('Client disconnected without sending enough data'))
+                self.app.logger.increment('client_disconnects')
+                raise HTTPClientDisconnect(request=req)
 
     def _store_object(self, req, data_source, nodes, partition,
                       outgoing_headers):
@@ -939,7 +942,6 @@ class BaseObjectController(Controller):
             if error_response:
                 return error_response
         else:
-            write_header = req.headers.get('X-Write-To-Core')
             reader = None
             try:
                 reader = req.environ['rebuilt_file'].read

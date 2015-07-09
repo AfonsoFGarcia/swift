@@ -70,21 +70,25 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		all_chunks = self.get_all(path)
 		
-		if not all_chunks:
+		if all_chunks is None:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
 		
 		# Get the chunks from memory and rebuild file
 		file_data, file_length = all_chunks
 		
+		body = bytearray(file_data)
+		file_data_cmp = zlib.compress(buffer(body, 0, len(body)), 9)
+		file_length_cmp = len(file_data_cmp)
+		
 		self.logger.debug(file_length)
 		
 		tmp_file = TemporaryFile()
-		tmp_file.write(file_data)
+		tmp_file.write(file_data_cmp)
 		tmp_file.seek(0)
 		
 		# Modify enviroment to include new file
 		env['rebuilt_file'] = tmp_file
-		env['rebuilt_file_size'] = file_length
+		env['rebuilt_file_size'] = file_length_cmp
 		
 		return self.app
 	
@@ -111,6 +115,20 @@ class AdaptiveDecompressionMiddleware(object):
 		else:
 			return (file_data, file_length)
 	
+	def COMPRESS(self, env):
+		req = Request(env)
+		body = bytearray(env['wsgi.input'].read(req.message_length))
+		compressed = zlib.compress(buffer(body, 0, len(body)), 9)
+		
+		tmp_file = TemporaryFile()
+		tmp_file.write(compressed)
+		tmp_file.seek(0)
+		
+		env['rebuilt_file'] = tmp_file
+		env['rebuilt_file_size'] = len(compressed)
+		
+		return self.app
+	
 	def __call__(self, env, start_response):
 		if env['REQUEST_METHOD'] != 'PUT':
 			return self.app(env, start_response)
@@ -120,14 +138,11 @@ class AdaptiveDecompressionMiddleware(object):
 		chunk_index = req.headers.get('X-Chunk-Index')
 		to_write = req.headers.get('X-Write-To-Core')
 		
-		if not chunk_index and not to_write:
-			return self.app(env, start_response)
-		
 		version, account, container, obj = req.split_path(1, 4, True)
 		if not obj:
 			return self.app(env, start_response)
 		
-		handler = None
+		handler = self.COMPRESS
 		
 		if to_write:
 			handler = self.WRITE
