@@ -65,6 +65,11 @@ def write_aux(path, conn):
 	
 	return (tmp_file, file_length_cmp)
 
+def send_file(path, auth_token, file_data, file_length):
+	headers = {"X-Auth-Token": auth_token, "Content-Length": file_length, "X-No-Compress": "1", "User-Agent": "AdaptiveMiddleware"}
+	conn = httplib.HTTPConnection("127.0.0.1:8080")
+	conn.request("PUT", path, file_data, headers)
+
 def write_async_proc(path, auth_token):
 	conn = sqlite3.connect('/dev/shm/adapt.db')
 	conn.execute('PRAGMA synchronous=OFF')
@@ -78,9 +83,17 @@ def write_async_proc(path, auth_token):
 	
 	file_data, file_length = data
 	
-	headers = {"X-Auth-Token": auth_token, "Content-Length": file_length, "X-No-Compress": "1", "User-Agent": "AdaptiveMiddleware"}
-	conn = httplib.HTTPConnection("127.0.0.1:8080")
-	conn.request("PUT", path, file_data, headers)
+	send_file(path, auth_token, file_data, file_length)
+
+def compress_async_proc(path, auth_token, body):
+	compressed = zlib.compress(buffer(body, 0, len(body)), 9)
+	
+	file_length = len(compressed)
+	file_data = TemporaryFile()
+	file_data.write(compressed)
+	file_data.seek(0)
+	
+	send_file(path, auth_token, file_data, file_length)
 
 class AdaptiveDecompressionMiddleware(object):
 	
@@ -130,7 +143,7 @@ class AdaptiveDecompressionMiddleware(object):
 		if auth_token is None:
 			auth_token = req.headers.get('X-Storage-Token')
 		
-		info = Template('Detected WRITE request: $rpath')
+		info = Template('Detected WRITE ASYNC request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
 		p = Process(target=write_async_proc, args=(path, auth_token))
@@ -172,6 +185,23 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		return self.app
 	
+	def COMPRESS_ASYNC(self, env):
+		req = Request(env)
+		path = req.path_qs
+		auth_token = req.headers.get('X-Auth-Token')
+		if auth_token is None:
+			auth_token = req.headers.get('X-Storage-Token')
+		
+		info = Template('Detected ASYNC request: $rpath')
+		self.logger.debug(info.substitute(rpath=path))
+		
+		body = bytearray(env['wsgi.input'].read(req.message_length))
+		
+		p = Process(target=compress_async_proc, args=(path, auth_token, body))
+		p.start()
+		
+		return Response(request=req, status=201)
+	
 	def VOID(self, env):
 		self.logger.debug('Detected VOID request')
 		return self.app
@@ -195,9 +225,11 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		if to_write:
 			handler = self.WRITE
-		
+			
 		if to_write_async:
-			handler = self.WRITE_ASYNC
+			handler = self.COMPRESS_ASYNC
+			if to_write:
+				handler = self.WRITE_ASYNC
 		
 		if chunk_index:
 			handler = self.STORE
