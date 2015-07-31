@@ -21,6 +21,30 @@ from multiprocessing import Process
 import zlib
 import sqlite3
 import httplib
+import tarfile
+import itertools
+
+def find_offsets(string, char):
+	offs = -1
+	while True:
+		offs = string.find(char, offs+1)
+		if offs == -1:
+			break
+		else:
+			yield offs
+
+def process_tar(f, request_url, auth_token):
+	t = tarfile.open(mode='r', fileobj=f)
+	for tarinfo in t:
+		ef = t.extractfile(tarinfo)
+		
+		content = ef.read()
+		
+		offs = find_offsets(request_url, "/")
+		path = "%s/%s" % (request_url[next(itertools.islice(offs,2,3)):], tarinfo.name)
+		
+		send_uncompressed_file(path, auth_token, content, tarinfo.size)
+	t.close()
 
 def get_all(path, conn):
 	count_rows = 0
@@ -45,7 +69,7 @@ def get_all(path, conn):
 	else:
 		return (file_data, file_length)
 
-def write_aux(path, conn):
+def write_aux(path, conn, is_bundle):
 	
 	all_chunks = get_all(path, conn)
 	
@@ -55,45 +79,65 @@ def write_aux(path, conn):
 	# Get the chunks from memory and rebuild file
 	file_data, file_length = all_chunks
 	
-	body = bytearray(file_data)
-	file_data_cmp = zlib.compress(buffer(body, 0, len(body)), 9)
-	file_length_cmp = len(file_data_cmp)
-	
 	tmp_file = TemporaryFile()
-	tmp_file.write(file_data_cmp)
-	tmp_file.seek(0)
 	
-	return (tmp_file, file_length_cmp)
+	if is_bundle:
+		tmp_file.write(file_data)
+		tmp_file.seek(0)
+		return (tmp_file, file_length)
+	else:
+		file_data_cmp = zlib.compress(buffer(file_data, 0, len(file_data)), 9)
+		file_length_cmp = len(file_data_cmp)
+		tmp_file.write(file_data_cmp)
+		tmp_file.seek(0)
+		return (tmp_file, file_length_cmp)
 
 def send_file(path, auth_token, file_data, file_length):
 	headers = {"X-Auth-Token": auth_token, "Content-Length": file_length, "X-No-Compress": "1", "User-Agent": "AdaptiveMiddleware"}
+	send_file_aux(path, file_data, headers)
+
+def send_uncompressed_file(path, auth_token, file_data, file_length):
+	headers = {"X-Auth-Token": auth_token, "Content-Length": file_length, "User-Agent": "AdaptiveMiddleware"}
+	send_file_aux(path, file_data, headers)
+
+def send_file_aux(path, file_data, headers):
 	conn = httplib.HTTPConnection("127.0.0.1:8080")
 	conn.request("PUT", path, file_data, headers)
 
-def write_async_proc(path, auth_token):
+def write_async_proc(path, auth_token, is_bundle, request_url):
 	conn = sqlite3.connect('/dev/shm/adapt.db')
 	conn.execute('PRAGMA synchronous=OFF')
 	conn.execute('PRAGMA journal_mode=MEMORY')
 	conn.text_factory = str
 	
-	data = write_aux(path, conn)
+	data = write_aux(path, conn, is_bundle)
 	
 	if data is None:
 		return
 	
 	file_data, file_length = data
 	
-	send_file(path, auth_token, file_data, file_length)
+	if is_bundle:
+		process_tar(file_data, request_url, auth_token)
+	else:
+		send_file(path, auth_token, file_data, file_length)
 
-def compress_async_proc(path, auth_token, body):
-	compressed = zlib.compress(buffer(body, 0, len(body)), 9)
-	
-	file_length = len(compressed)
-	file_data = TemporaryFile()
-	file_data.write(compressed)
-	file_data.seek(0)
-	
-	send_file(path, auth_token, file_data, file_length)
+def compress_async_proc(path, auth_token, body, is_bundle, request_url):
+	if is_bundle:
+		file_data = TemporaryFile()
+		file_data.write(body)
+		file_data.seek(0)
+		
+		process_tar(file_data, request_url, auth_token)
+	else:
+		compressed = zlib.compress(buffer(body, 0, len(body)), 9)
+		
+		file_length = len(compressed)
+		file_data = TemporaryFile()
+		file_data.write(compressed)
+		file_data.seek(0)
+		
+		send_file(path, auth_token, file_data, file_length)
 
 class AdaptiveDecompressionMiddleware(object):
 	
@@ -110,8 +154,10 @@ class AdaptiveDecompressionMiddleware(object):
 			cur = self.conn.cursor()
 			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID TEXT, Chunk INT, Data TEXT)')
 	
-	def STORE(self, env):
+	def STORE(self, env, is_bundle, request_url):
 		req = Request(env)
+		if is_bundle:
+			return Response(request=req, status=500, body="No bundles through STORE", content_type="text/plain")
 		path = req.path_qs
 		chunk_index = int(req.headers.get('X-Chunk-Index'))
 		
@@ -136,7 +182,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		return Response(request=req, status=201)
 	
-	def WRITE_ASYNC(self, env):
+	def WRITE_ASYNC(self, env, is_bundle, request_url):
 		req = Request(env)
 		path = req.path_qs
 		auth_token = req.headers.get('X-Auth-Token')
@@ -146,18 +192,20 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('Detected WRITE ASYNC request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		p = Process(target=write_async_proc, args=(path, auth_token))
+		p = Process(target=write_async_proc, args=(path, auth_token, is_bundle, request_url))
 		p.start()
 		return Response(request=req, status=201)
 	
-	def WRITE(self, env):
+	def WRITE(self, env, is_bundle, request_url):
 		req = Request(env)
+		if is_bundle:
+			return Response(request=req, status=500, body="No bundles through SYNC methods", content_type="text/plain")
 		path = req.path_qs
 		
 		info = Template('Detected WRITE request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		result = write_aux(path, self.conn)
+		result = write_aux(path, self.conn, is_bundle)
 		
 		if result is None:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
@@ -171,8 +219,10 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		return self.app
 	
-	def COMPRESS(self, env):
+	def COMPRESS(self, env, is_bundle, request_url):
 		req = Request(env)
+		if is_bundle:
+			return Response(request=req, status=500, body="No bundles through SYNC methods", content_type="text/plain")
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 		compressed = zlib.compress(buffer(body, 0, len(body)), 9)
 		
@@ -185,7 +235,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		return self.app
 	
-	def COMPRESS_ASYNC(self, env):
+	def COMPRESS_ASYNC(self, env, is_bundle, request_url):
 		req = Request(env)
 		path = req.path_qs
 		auth_token = req.headers.get('X-Auth-Token')
@@ -197,12 +247,15 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		body = bytearray(env['wsgi.input'].read(req.message_length))
 		
-		p = Process(target=compress_async_proc, args=(path, auth_token, body))
+		p = Process(target=compress_async_proc, args=(path, auth_token, body, is_bundle, request_url))
 		p.start()
 		
 		return Response(request=req, status=201)
 	
-	def VOID(self, env):
+	def VOID(self, env, is_bundle, request_url):
+		req = Request(env)
+		if is_bundle:
+			return Response(request=req, status=500, body="No bundles through VOID", content_type="text/plain")
 		self.logger.debug('Detected VOID request')
 		return self.app
 	
@@ -216,6 +269,8 @@ class AdaptiveDecompressionMiddleware(object):
 		to_write = req.headers.get('X-Write-To-Core')
 		to_write_async = req.headers.get('X-Write-Async')
 		no_compress = req.headers.get('X-No-Compress')
+		is_bundle = req.headers.get('X-Bundle')
+		request_url = req.headers.get('X-Request-URL')
 		
 		version, account, container, obj = req.split_path(1, 4, True)
 		if not obj:
@@ -237,7 +292,7 @@ class AdaptiveDecompressionMiddleware(object):
 		if no_compress:
 			handler = self.VOID
 		
-		return handler(env)(env, start_response)
+		return handler(env, is_bundle, request_url)(env, start_response)
 		
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
