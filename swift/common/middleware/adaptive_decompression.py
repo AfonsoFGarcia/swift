@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Afonso Falardo Garcia
+9# Copyright (c) 2015 Afonso Falardo Garcia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ def find_offsets(string, char):
 
 def process_tar(f, request_url, auth_token):
 	t = tarfile.open(mode='r', fileobj=f)
+	fl = open('/home/agfrg/tar.log', 'a')
 	for tarinfo in t:
 		ef = t.extractfile(tarinfo)
 		
@@ -43,35 +44,38 @@ def process_tar(f, request_url, auth_token):
 		offs = find_offsets(request_url, "/")
 		path = "%s/%s" % (request_url[next(itertools.islice(offs,2,3)):], tarinfo.name)
 		
+		fl.write(path);
+		
 		send_uncompressed_file(path, auth_token, content, tarinfo.size)
 	t.close()
+	fl.close()
 
-def get_all(path, conn):
+def get_all(path, conn, adaptstamp):
 	count_rows = 0
 	file_data = bytearray()
 	file_length = 0
 	
 	with conn:
 		cur = conn.cursor()
-		query = (path,)
+		query = (path, adaptstamp)
 		
-		for row in cur.execute('SELECT * FROM Data WHERE ID=? ORDER BY Chunk', query):
+		for row in cur.execute('SELECT * FROM Data WHERE ID=? AND Adaptstamp=? ORDER BY Chunk', query):
 			count_rows = count_rows + 1
-			chunk = row[2]
+			chunk = row[3]
 			for b in chunk:
 				file_data.append(b)
 			file_length = file_length + len(chunk)
 		
-		cur.execute('DELETE FROM DATA WHERE ID=?', query)
+		cur.execute('DELETE FROM DATA WHERE ID=? AND Adaptstamp=?', query)
 	
 	if count_rows == 0:
 		return None
 	else:
 		return (file_data, file_length)
 
-def write_aux(path, conn, is_bundle):
+def write_aux(path, conn, is_bundle, adaptstamp):
 	
-	all_chunks = get_all(path, conn)
+	all_chunks = get_all(path, conn, adaptstamp)
 	
 	if all_chunks is None:
 		return None
@@ -103,14 +107,17 @@ def send_uncompressed_file(path, auth_token, file_data, file_length):
 def send_file_aux(path, file_data, headers):
 	conn = httplib.HTTPConnection("127.0.0.1:8080")
 	conn.request("PUT", path, file_data, headers)
+	r = conn.getresponse()
+	data = r.read()
+	conn.close()
 
-def write_async_proc(path, auth_token, is_bundle, request_url):
+def write_async_proc(path, auth_token, is_bundle, request_url, adaptstamp):
 	conn = sqlite3.connect('/dev/shm/adapt.db')
 	conn.execute('PRAGMA synchronous=OFF')
 	conn.execute('PRAGMA journal_mode=MEMORY')
 	conn.text_factory = str
 	
-	data = write_aux(path, conn, is_bundle)
+	data = write_aux(path, conn, is_bundle, adaptstamp)
 	
 	if data is None:
 		return
@@ -152,9 +159,9 @@ class AdaptiveDecompressionMiddleware(object):
 
 		with self.conn:
 			cur = self.conn.cursor()
-			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID TEXT, Chunk INT, Data TEXT)')
+			cur.execute('CREATE TABLE IF NOT EXISTS Data(ID TEXT, Adaptstamp TEXT, Chunk INT, Data TEXT)')
 	
-	def STORE(self, env, is_bundle, request_url):
+	def STORE(self, env, is_bundle, request_url, adaptstamp):
 		req = Request(env)
 		if is_bundle:
 			return Response(request=req, status=500, body="No bundles through STORE", content_type="text/plain")
@@ -177,12 +184,12 @@ class AdaptiveDecompressionMiddleware(object):
 		with self.conn:
 			
 			cur = self.conn.cursor()
-			store = (path, chunk_index, chunk)
-			cur.execute('INSERT INTO Data VALUES(?,?,?)', store)
+			store = (path, adaptstamp, chunk_index, chunk)
+			cur.execute('INSERT INTO Data VALUES(?,?,?,?)', store)
 		
 		return Response(request=req, status=201)
 	
-	def WRITE_ASYNC(self, env, is_bundle, request_url):
+	def WRITE_ASYNC(self, env, is_bundle, request_url, adaptstamp):
 		req = Request(env)
 		path = req.path_qs
 		auth_token = req.headers.get('X-Auth-Token')
@@ -192,11 +199,11 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('Detected WRITE ASYNC request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		p = Process(target=write_async_proc, args=(path, auth_token, is_bundle, request_url))
+		p = Process(target=write_async_proc, args=(path, auth_token, is_bundle, request_url, adaptstamp))
 		p.start()
 		return Response(request=req, status=201)
 	
-	def WRITE(self, env, is_bundle, request_url):
+	def WRITE(self, env, is_bundle, request_url, adaptstamp):
 		req = Request(env)
 		if is_bundle:
 			return Response(request=req, status=500, body="No bundles through SYNC methods", content_type="text/plain")
@@ -205,7 +212,7 @@ class AdaptiveDecompressionMiddleware(object):
 		info = Template('Detected WRITE request: $rpath')
 		self.logger.debug(info.substitute(rpath=path))
 		
-		result = write_aux(path, self.conn, is_bundle)
+		result = write_aux(path, self.conn, is_bundle, adaptstamp)
 		
 		if result is None:
 			return Response(request=req, status=404, body="No chunks found", content_type="text/plain")
@@ -219,7 +226,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		return self.app
 	
-	def COMPRESS(self, env, is_bundle, request_url):
+	def COMPRESS(self, env, is_bundle, request_url, adaptstamp):
 		req = Request(env)
 		if is_bundle:
 			return Response(request=req, status=500, body="No bundles through SYNC methods", content_type="text/plain")
@@ -235,7 +242,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		return self.app
 	
-	def COMPRESS_ASYNC(self, env, is_bundle, request_url):
+	def COMPRESS_ASYNC(self, env, is_bundle, request_url, adaptstamp):
 		req = Request(env)
 		path = req.path_qs
 		auth_token = req.headers.get('X-Auth-Token')
@@ -252,7 +259,7 @@ class AdaptiveDecompressionMiddleware(object):
 		
 		return Response(request=req, status=201)
 	
-	def VOID(self, env, is_bundle, request_url):
+	def VOID(self, env, is_bundle, request_url, adaptstamp):
 		req = Request(env)
 		if is_bundle:
 			return Response(request=req, status=500, body="No bundles through VOID", content_type="text/plain")
@@ -271,7 +278,8 @@ class AdaptiveDecompressionMiddleware(object):
 		no_compress = req.headers.get('X-No-Compress')
 		is_bundle = req.headers.get('X-Bundle')
 		request_url = req.headers.get('X-Request-URL')
-		
+		adaptstamp = req.headers.get('X-Adaptstamp')		
+
 		version, account, container, obj = req.split_path(1, 4, True)
 		if not obj:
 			return self.app(env, start_response)
@@ -292,7 +300,7 @@ class AdaptiveDecompressionMiddleware(object):
 		if no_compress:
 			handler = self.VOID
 		
-		return handler(env, is_bundle, request_url)(env, start_response)
+		return handler(env, is_bundle, request_url, adaptstamp)(env, start_response)
 		
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
