@@ -105,8 +105,9 @@ def send_uncompressed_file(path, auth_token, file_data, file_length):
 	send_file_aux(path, file_data, headers)
 
 def send_file_aux(path, file_data, headers):
+	processed_path = path.replace(" ", "%20")
 	conn = httplib.HTTPConnection("127.0.0.1:8080")
-	conn.request("PUT", path, file_data, headers)
+	conn.request("PUT", processed_path, file_data, headers)
 	r = conn.getresponse()
 	data = r.read()
 	conn.close()
