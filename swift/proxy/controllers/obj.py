@@ -817,6 +817,8 @@ class BaseObjectController(Controller):
             self.app.logger.exception(
                 _('ERROR Exception causing client disconnect'))
             raise HTTPClientDisconnect(request=req)
+        
+        # Try to access rebuilt_file (if successful, do not check transfer size) - To prevent client disconnected errors
         try:
             req.environ['rebuilt_file']
         except KeyError:
@@ -943,6 +945,8 @@ class BaseObjectController(Controller):
                 return error_response
         else:
             reader = None
+            
+            # Try to access rebuilt_file (if successful, use it) - To prevent client disconnected errors
             try:
                 reader = req.environ['rebuilt_file'].read
                 for ind_dict in outgoing_headers:

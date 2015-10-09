@@ -18,9 +18,8 @@ from swift.common.utils import get_logger, split_path
 from swift.common.http import is_success
 import zlib
 
+# Middleware class (compress download requests)
 class CompressionMiddleware(object):
-	storage = {}
-	
 	def __init__(self, app, conf):
 		self.app = app
 		self.logger = get_logger(conf)
@@ -29,23 +28,29 @@ class CompressionMiddleware(object):
 	def __call__(self, req):
 		obj = None
 		
+		# Only process if object
 		try:
 			(version, account, container, obj) = split_path(req.path_info, 4, 4, True)
 		except ValueError:
 			pass
 		
+		# Send request down the pipeline and get response
 		resp = req.get_response(self.app)
 		
+		# Get request headers for compression
 		get_compressed = req.headers.get('X-Get-Compressed')
 		
+		# If object was requested uncompressed, uncompress the object and modify the response
 		if not get_compressed and obj and req.method == 'GET' and is_success(resp.status_int):
 			body = bytearray(resp.body)
 			def_body = zlib.decompress(buffer(body, 0, len(body)))
 			resp.body = def_body
 			resp.headers['Content-Length'] = len(def_body)
-			
-		return resp
 		
+		# Continue pipeline
+		return resp
+
+# Factory (for egg)
 def filter_factory(global_conf, **local_conf):
 	conf = global_conf.copy()
 	conf.update(local_conf)
